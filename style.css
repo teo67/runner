@@ -1,0 +1,55 @@
+* {
+    box-sizing: border-box;
+    font-family: "Verdana";
+}
+html {
+    background-color: #ffc2e2;
+}
+body {
+    overflow: hidden;
+}
+nav#menu {
+    position: absolute;
+    width: 90vw;
+    left: 5vw;
+    top: 1vw;
+    background-color: #6e44ff;
+    border-radius: 1vw;
+    padding: 0.75vw;
+}
+nav#menu button {
+    padding: 0.2vw;
+    background-color: #b892ff;
+    border: none;
+    color: #6e44ff;
+    border-radius: 0.3vw;
+    font-size: 1vw;
+}
+div.level {
+    position: absolute;
+    overflow: hidden;
+    z-index: -1;
+}
+div.block {
+    position: absolute;
+    background-color: #6e44ff;
+}
+div.player {
+    width: 5vw;
+    height: 5vw;
+    background-color: transparent;
+    border: 1vw solid #b892ff;
+    border-radius: 0.5vw;
+    position: absolute;
+}
+h1#FPS {
+    position: absolute;
+    top: 0;
+    left: 1vw;
+    color: green;
+    z-index: 100;
+    display: inline;
+    background-color: lightgreen;
+    padding: 1vw;
+    border-radius: 1vw;
+}
