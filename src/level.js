@@ -136,6 +136,8 @@ class Level {
         const yDist = this.getYTranslationDistance(A, B, BYTranslation);
         if(xDist === true) {
             if(yDist === true) {
+                console.log(A);
+                console.log(B);
                 throw "uhhh these blocks are inside of each other??? ERROR";
             }
             if(yDist === false) { return false; }
@@ -177,6 +179,9 @@ class Level {
                 }
             }
         }
+        if(translation < 0) {
+            translation = 0;
+        }
         A.x += translation * A.vx;
         A.y += translation * A.vy;
         this.updatePose(A.x, A.y, A.element);
@@ -202,8 +207,6 @@ class Level {
             if(horizontal ? connection.markedX : connection.markedY) {
                 if(this.isMatching(total + adding, i) || this.isMatching((horizontal ? connection.vx : connection.vy) * -1, i)) {
                     this.chainMomentum(connection, info, i, horizontal, starters, total + adding);
-                } else {
-                    starters[i].push(connection);
                 }
             }
         }
@@ -284,10 +287,17 @@ class Level {
             }
             
             A.markedX = true;
-            for(let i = 0; i < 4; i++) {
-                if(A.touching[i].length > 0 && A.touching[3 - i].length == 0) {
-                    starters[i].push(A);
-                }
+            if(A.touching[0].length > 0 && A.vx < 0) {
+                starters[0].push(A);
+            }
+            if(A.touching[1].length > 0 && A.vy > 0) {
+                starters[1].push(A);
+            }
+            if(A.touching[2].length > 0 && A.vy < 0) {
+                starters[2].push(A);
+            }
+            if(A.touching[3].length > 0 && A.vx > 0) {
+                starters[3].push(A);
             }
         }
         for(let i = 0; i < 4; i++) {
@@ -295,7 +305,17 @@ class Level {
             const relevantVelocity = horizontal ? "vx" : "vy";
             const relevantMarking = horizontal ? "markedX" : "markedY";
             for(const starter of starters[i]) {
-                if((horizontal && starter.markedX) || (!horizontal && starter.markedY)) {
+                if(starter[relevantMarking]) {
+                    let skip = false;
+                    for(const touch of starter.touching[3 - i]) {
+                        if(touch[relevantMarking] && this.isMatching(touch[relevantVelocity], i)) {
+                            skip = true;
+                            break;
+                        }
+                    }
+                    if(skip) {
+                        continue;
+                    }
                     let momentumInfo = {
                         total: 0,
                         totalMass: 0,
@@ -303,8 +323,7 @@ class Level {
                         static: false
                     };
                     this.chainMomentum(starter, momentumInfo, i, horizontal, starters, 0);
-                    
-                    if(momentumInfo.total == 0 || (momentumInfo.total < 0) == (i % 2 == 0)) {
+                    if(momentumInfo.connected.length > 1 && (momentumInfo.total == 0 || (momentumInfo.total < 0) == (i % 2 == 0))) {
                         const settingVelocity = momentumInfo.static ? 0 : (momentumInfo.total / momentumInfo.totalMass);
                         for(const item of momentumInfo.connected) {
                             item[relevantVelocity] = settingVelocity;

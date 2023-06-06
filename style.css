@@ -34,12 +34,16 @@ div.block {
     position: absolute;
     background-color: #6e44ff;
 }
+div.movingblock {
+    position: absolute;
+    background-color: #b892ff;
+    border: 0.5vw solid #6e44ff;
+}
 div.player {
     width: 5vw;
     height: 5vw;
     background-color: transparent;
     border: 1vw solid #b892ff;
-    border-radius: 0.5vw;
     position: absolute;
 }
 h1#FPS {

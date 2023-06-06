@@ -6,16 +6,16 @@ import Player from './src/player.js';
 const game = document.getElementById("game");
 const fpsCounter = document.getElementById("FPS");
 const level = new Level([
-    new Wall(-50, -40, 5, 80),
-    new Wall(45, -40, 5, 80),
-    new Wall(-40, 45, 80, 5),
-    new Wall(-40, -50, 80, 5),
-    new MovingBlock(-20, 30, 7, 7, 5, false),
-    new MovingBlock(0, 30, 7, 7, 5, false),
-    new MovingBlock(20, 30, 7, 7, 5, false),
-    new MovingBlock(-20, -30, 7, 7, 5, false),
-    new MovingBlock(0, -30, 7, 7, 5, false),
-    new MovingBlock(20, -30, 7, 7, 5, false)
+    new Wall(-150, -150, 5, 300),
+    new Wall(145, -150, 5, 300),
+    new Wall(-145, 145, 290, 5),
+    new Wall(-145, -150, 290, 5),
+    new MovingBlock(-20, 20, 7, 7, 5, false),
+    new MovingBlock(-3, 20, 7, 7, 5, false),
+    new MovingBlock(-20, 10, 7, 7, 5, false),
+    new MovingBlock(-3, 10, 7, 7, 5, false),
+    new MovingBlock(-20, -20, 7, 7, 5, false),
+    new MovingBlock(-3, -20, 7, 7, 5, false)
 ], new Player());
 level.load(game);
 let lastTime = Date.now();
