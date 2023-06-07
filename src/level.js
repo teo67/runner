@@ -196,22 +196,49 @@ class Level {
         }
     }
     isMatching(value, i) {
-        return value != 0 && (value < 0) == (i % 2 == 0);
+        return (value < 0) == (i % 2 == 0) || epsilonEquals(value, 0);
     }
-    chainMomentum(starter, info, i, horizontal, starters, total) {
+    chainMomentum(starter, info, i, horizontal, total, starters) {
         info.connected.push(starter);
         info.totalMass += starter.m;
         const adding = (horizontal ? starter.vx : starter.vy) * starter.m;
         info.total += adding;
         for(const connection of starter.touching[i]) {
             if(horizontal ? connection.markedX : connection.markedY) {
-                if(this.isMatching(total + adding, i) || this.isMatching((horizontal ? connection.vx : connection.vy) * -1, i)) {
-                    this.chainMomentum(connection, info, i, horizontal, starters, total + adding);
+                const nextMoment = horizontal ? connection.vx : connection.vy;
+                if(this.isMatching((total + adding)/info.totalMass - nextMoment, i)) {
+                    this.chainMomentum(connection, info, i, horizontal, total + adding, starters);
+                } else {
+                    starters[i].push(connection);
                 }
             }
         }
         if(starter.touchingStatic[i]) {
             info.static = true;
+        }
+    }
+    handleMomentum(starter, i, relevantMarking, relevantVelocity, horizontal, starters) {
+        if(starter[relevantMarking]) {
+            if(starter[relevantVelocity] == 0 || !this.isMatching(starter[relevantVelocity], i)) {
+                for(const touch of starter.touching[i]) {
+                    this.handleMomentum(touch, i, relevantMarking, relevantVelocity, horizontal, starters);
+                }
+                return;
+            }
+            let momentumInfo = {
+                total: 0,
+                totalMass: 0,
+                connected: [], 
+                static: false
+            };
+            this.chainMomentum(starter, momentumInfo, i, horizontal, 0, starters);
+            if(momentumInfo.connected.length > 1 && (momentumInfo.total == 0 || (momentumInfo.total < 0) == (i % 2 == 0))) {
+                const settingVelocity = momentumInfo.static ? 0 : (momentumInfo.total / momentumInfo.totalMass);
+                for(const item of momentumInfo.connected) {
+                    item[relevantVelocity] = settingVelocity;
+                    item[relevantMarking] = false;
+                }
+            }
         }
     }
     updateCollisions(dt) {
@@ -287,17 +314,10 @@ class Level {
             }
             
             A.markedX = true;
-            if(A.touching[0].length > 0 && A.vx < 0) {
-                starters[0].push(A);
-            }
-            if(A.touching[1].length > 0 && A.vy > 0) {
-                starters[1].push(A);
-            }
-            if(A.touching[2].length > 0 && A.vy < 0) {
-                starters[2].push(A);
-            }
-            if(A.touching[3].length > 0 && A.vx > 0) {
-                starters[3].push(A);
+            for(let i = 0; i < 4; i++) {
+                if(A.touching[i].length > 0 && A.touching[3 - i].length == 0) {
+                    starters[i].push(A);
+                }
             }
         }
         for(let i = 0; i < 4; i++) {
@@ -305,32 +325,7 @@ class Level {
             const relevantVelocity = horizontal ? "vx" : "vy";
             const relevantMarking = horizontal ? "markedX" : "markedY";
             for(const starter of starters[i]) {
-                if(starter[relevantMarking]) {
-                    let skip = false;
-                    for(const touch of starter.touching[3 - i]) {
-                        if(touch[relevantMarking] && this.isMatching(touch[relevantVelocity], i)) {
-                            skip = true;
-                            break;
-                        }
-                    }
-                    if(skip) {
-                        continue;
-                    }
-                    let momentumInfo = {
-                        total: 0,
-                        totalMass: 0,
-                        connected: [], 
-                        static: false
-                    };
-                    this.chainMomentum(starter, momentumInfo, i, horizontal, starters, 0);
-                    if(momentumInfo.connected.length > 1 && (momentumInfo.total == 0 || (momentumInfo.total < 0) == (i % 2 == 0))) {
-                        const settingVelocity = momentumInfo.static ? 0 : (momentumInfo.total / momentumInfo.totalMass);
-                        for(const item of momentumInfo.connected) {
-                            item[relevantVelocity] = settingVelocity;
-                            item[relevantMarking] = false;
-                        }
-                    }
-                }
+                this.handleMomentum(starter, i, relevantMarking, relevantVelocity, horizontal, starters);
             }
         }
     }
