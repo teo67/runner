@@ -10,12 +10,19 @@ const level = new Level([
     new Wall(45, -50, 5, 100),
     new Wall(-45, 45, 90, 5),
     new Wall(-45, -50, 90, 5),
-    new MovingBlock(-20, -35, 7, 7, 5, false),
-    new MovingBlock(-3, -35, 7, 7, 5, false),
-    new MovingBlock(-20, -15, 7, 7, 5, false),
-    new MovingBlock(-3, -15, 7, 7, 5, false),
-    new MovingBlock(-20, 25, 7, 7, 5, false),
-    new MovingBlock(-3, 25, 7, 7, 5, false)
+    new MovingBlock(-35, -25, 5, 5, 5, false),
+    new MovingBlock(-30, -25, 5, 5, 5, false),
+    new MovingBlock(-25, -25, 5, 5, 5, false),
+    new MovingBlock(-20, -25, 5, 5, 5, false),
+    new MovingBlock(-15, -25, 5, 5, 5, false),
+    new MovingBlock(-10, -25, 5, 10, 5, false),
+    new MovingBlock(-5, -25, 5, 5, 5, false),
+    new MovingBlock(0, -25, 5, 5, 5, false),
+    new MovingBlock(5, -25, 5, 5, 5, false),
+    new MovingBlock(10, -25, 5, 5, 5, false),
+    new MovingBlock(15, -25, 5, 5, 5, false),
+    new MovingBlock(20, -25, 5, 5, 5, false),
+    new MovingBlock(-5, -40, 5, 5, 5, false)
 ], new Player());
 level.load(game);
 let lastTime = Date.now();

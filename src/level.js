@@ -196,21 +196,19 @@ class Level {
         }
     }
     isMatching(value, i) {
-        return (value < 0) == (i % 2 == 0) || epsilonEquals(value, 0);
+        return value != 0 && (value < 0) == (i % 2 == 0);
     }
     chainMomentum(starter, info, i, horizontal, total, starters) {
         info.connected.push(starter);
         info.totalMass += starter.m;
+        const savedMass = info.totalMass;
         const adding = (horizontal ? starter.vx : starter.vy) * starter.m;
         info.total += adding;
         for(const connection of starter.touching[i]) {
-            if(horizontal ? connection.markedX : connection.markedY) {
-                const nextMoment = horizontal ? connection.vx : connection.vy;
-                if(this.isMatching((total + adding)/info.totalMass - nextMoment, i)) {
-                    this.chainMomentum(connection, info, i, horizontal, total + adding, starters);
-                } else {
-                    starters[i].push(connection);
-                }
+            const nextMoment = horizontal ? connection.vx : connection.vy;
+            const diff = (total + adding)/savedMass - nextMoment;
+            if(epsilonEquals(diff, 0) || this.isMatching(diff, i)) {
+                this.chainMomentum(connection, info, i, horizontal, total + adding, starters);
             }
         }
         if(starter.touchingStatic[i]) {
@@ -219,12 +217,6 @@ class Level {
     }
     handleMomentum(starter, i, relevantMarking, relevantVelocity, horizontal, starters) {
         if(starter[relevantMarking]) {
-            if(starter[relevantVelocity] == 0 || !this.isMatching(starter[relevantVelocity], i)) {
-                for(const touch of starter.touching[i]) {
-                    this.handleMomentum(touch, i, relevantMarking, relevantVelocity, horizontal, starters);
-                }
-                return;
-            }
             let momentumInfo = {
                 total: 0,
                 totalMass: 0,
@@ -242,6 +234,7 @@ class Level {
         }
     }
     updateCollisions(dt) {
+        
         for(let i = 0; i < this.movingBlocks.length; i++) {
             this.movingBlocks[i].markedX = false; // used as placeholder, will be set to true
             this.movingBlocks[i].markedY = true;
@@ -259,6 +252,9 @@ class Level {
             this.movingBlocks[i].translation = dt;
             if(ratio < 1) {
                 console.log("L + Ratio");
+                console.log(absX);
+                console.log(absY);
+                console.log(dt);
                 this.movingBlocks[i].translation *= ratio;
             }
         }
@@ -268,6 +264,7 @@ class Level {
                 this.preliminaryCollisionAdjustment(A);
             }
         }
+        
         const starters = [[], [], [], []];
         for(let i = 0; i < this.movingBlocks.length; i++) {
             const A = this.movingBlocks[i];
@@ -315,8 +312,19 @@ class Level {
             
             A.markedX = true;
             for(let i = 0; i < 4; i++) {
-                if(A.touching[i].length > 0 && A.touching[3 - i].length == 0) {
-                    starters[i].push(A);
+                const horizontal = i == 0 || i == 3;
+                const relevantVelocity = horizontal ? "vx" : "vy";
+                if(A.touching[i].length > 0 && this.isMatching(A[relevantVelocity], i)) {
+                    let broken = false;
+                    for(const otherTouching of A.touching[3 - i]) {
+                        if(!this.isMatching(A[relevantVelocity] - otherTouching[relevantVelocity], i)) {
+                            broken = true;
+                            break;
+                        }
+                    }
+                    if(!broken) {
+                        starters[i].push(A);
+                    }
                 }
             }
         }
@@ -324,8 +332,8 @@ class Level {
             const horizontal = i == 0 || i == 3;
             const relevantVelocity = horizontal ? "vx" : "vy";
             const relevantMarking = horizontal ? "markedX" : "markedY";
-            for(const starter of starters[i]) {
-                this.handleMomentum(starter, i, relevantMarking, relevantVelocity, horizontal, starters);
+            for(let j = 0; j < starters[i].length; j++) {
+                this.handleMomentum(starters[i][j], i, relevantMarking, relevantVelocity, horizontal, starters);
             }
         }
     }

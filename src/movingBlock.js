@@ -9,7 +9,6 @@ class MovingBlock extends Block {
         this.ay = 0;
         this.touching = [[], [], [], []];
         this.touchingStatic = [false, false, false, false];
-        this.touchingTowards = [false, false, false, false];
         this.translation = 0;
         this.markedX = false;
         this.markedY = false;
