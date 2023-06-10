@@ -1,38 +1,104 @@
 import MovingBlock from './movingBlock.js';
+import Escape from './escape.js';
 import epsilonEquals from './epsilonEquals.js';
 const maximumReasonableTranslation = 2;
 const maximumVelocity = 40;
+const escapeVelocity = 20;
+const bounds = ["minX", "maxY", "minY", "maxX"];
+const cover = document.getElementById("cover");
 class Level {
     constructor(blocks, player) {
         this.player = player;
         this.blocks = blocks;
-        this.blocks.push(player);
         this.movingBlocks = [];
+        this.element = document.createElement("div");
+        this.element.classList.add("level");
         for(const block of this.blocks) {
+            block.initialize(this);
             if(block instanceof MovingBlock) {
                 this.movingBlocks.push(block);
             }
         }
-        this.resetElement();
+        this.blocks.push(player);
+        this.movingBlocks.push(player);
+        
+        
         this.minX = 0;
         this.minY = 0;
         this.maxX = 0;
         this.maxY = 0;
         this.alreadyLoaded = false;
+        this.escapes = [[], [], [], []];
+        this.escapingSide = 0;
+        this.leavingTo = 1; // null = in middle of level, escape = leaving, 1 = entering
+        this.fullyLeft = false;
     }
-    resetElement() {
-        this.element = document.createElement("div");
-        this.element.classList.add("level");
+    static LEFT = 0;
+    static RIGHT = 3;
+    static UP = 1;
+    static DOWN = 2;
+    setBoundaries(minX, maxX, minY, maxY) {
+        this.minX = minX;
+        this.maxX = maxX;
+        this.minY = minY;
+        this.maxY = maxY;
+        this.finishLoading();
     }
-    load(game) {
-        if(!this.alreadyLoaded) {
-            this.minX = 0;
-            this.minY = 0;
-            this.maxX = this.player.w;
-            this.maxY = this.player.h;
+    connect(side, lowerBound, upperBound, otherLevel, otherLowerBound, otherUpperBound) {
+        this.addEscape(side, lowerBound, upperBound, otherLevel, otherUpperBound/2 + otherLowerBound/2 - 2.5);
+        otherLevel.addEscape(3 - side, otherLowerBound, otherUpperBound, this, upperBound/2 + lowerBound/2 - 2.5);
+    }
+    addEscape(side, lowerBound, upperBound, otherLevel, spawnPos) {
+        const visual = document.createElement("div");
+        const behindVisual = document.createElement("div");
+        visual.classList.add("escape");
+        behindVisual.classList.add("behindEscape");
+        visual.classList.add(`a${side}`);
+        this.element.appendChild(visual);
+        this.element.appendChild(behindVisual);
+        let settingValue = this[bounds[side]];
+        let otherSettingValue = otherLevel[bounds[3 - side]] - 10;
+        if(side % 2 == 0) {
+            settingValue -= 5;
+            otherSettingValue += 15;
         }
-        for(const block of this.blocks) {
-            block.initialize(this, this.player);
+        const horizontal = side == 0 || side == 3;
+        if(horizontal) {
+            this.updatePose(settingValue, lowerBound, visual);
+            this.updatePose(settingValue, lowerBound, behindVisual);
+            visual.style.height = `${upperBound - lowerBound}vw`;
+            behindVisual.style.height = `${upperBound - lowerBound}vw`;
+            this.escapes[side].push(new Escape(lowerBound, upperBound, otherLevel, otherSettingValue, spawnPos));
+        } else {
+            this.updatePose(lowerBound, settingValue, visual);
+            this.updatePose(lowerBound, settingValue, behindVisual);
+            visual.style.width = `${upperBound - lowerBound}vw`;
+            behindVisual.style.width = `${upperBound - lowerBound}vw`;
+            this.escapes[side].push(new Escape(lowerBound, upperBound, otherLevel, spawnPos, otherSettingValue));
+        }
+    }
+    load(game, x = 0, y = 0, firstLevel = false) {
+        this.fullyLeft = false;
+        this.leavingTo = firstLevel ? null : 1;
+        this.player.initialize(this);
+        if(!this.alreadyLoaded) {
+            this.minX = x;
+            this.minY = y;
+            this.maxX = x + this.player.w;
+            this.maxY = y + this.player.h;
+        }
+        for(let i = 0; i < this.blocks.length; i++) {
+            if(this.blocks[i].deleting) {
+                this.element.removeChild(this.blocks[i].element);
+                this.blocks.splice(i, 1);
+                i--;
+                continue;
+            }
+            if(this.blocks[i].deleted) {
+                this.element.appendChild(this.blocks[i].element);
+                delete this.blocks[i].deleted;
+            }
+            const block = this.blocks[i];
             if(block !== this.player && !this.alreadyLoaded) {
                 if(block.x < this.minX) {
                     this.minX = block.x;
@@ -49,24 +115,35 @@ class Level {
             }
         }
         if(!this.alreadyLoaded) {
-            this.element.style.width = `${this.maxX - this.minX}vw`;
-            this.element.style.height = `${this.maxY - this.minY}vw`;
-            this.alreadyLoaded = true;
+            this.finishLoading();
         }
-        this.player.x = 0;
-        this.player.y = 0;
+        this.player.x = x;
+        this.player.y = y;
         this.updateView();
         for(const block of this.blocks) {
             this.updatePose(block.x, block.y, block.element);
         }
         game.appendChild(this.element);
     }
+    finishLoading() {
+        this.element.style.width = `${this.maxX - this.minX}vw`;
+        this.element.style.height = `${this.maxY - this.minY}vw`;
+        this.createBoundary(-15, -15, 10, this.maxY - this.minY + 30);
+        this.createBoundary(this.maxX - this.minX + 5, -15, 10, this.maxY - this.minY + 30);
+        this.createBoundary(-10, -15, this.maxX - this.minX + 20, 10);
+        this.createBoundary(-10, this.maxY - this.minY + 5, this.maxX - this.minX + 20, 10);
+        this.alreadyLoaded = true;
+    }
+    createBoundary(x, y, w, h) {
+        const bound = document.createElement("div");
+        bound.classList.add("boundary");
+        bound.style.left = `${x}vw`;
+        bound.style.height = `${h}vw`;
+        bound.style.bottom = `${y}vw`;
+        bound.style.width = `${w}vw`;
+        this.element.appendChild(bound);
+    }
     update(dt) {
-        for(const block of this.blocks) {
-            if(block.updates) {
-                block.update(dt);
-            }
-        }
         this.updateCollisions(dt);
         this.updateView();
     }
@@ -179,6 +256,16 @@ class Level {
                 }
             }
         }
+        if(A.vx < 0 && this.minX - A.x > translation * A.vx) {
+            translation = (this.minX - A.x) / A.vx;
+        } else if(A.vx > 0 && this.maxX - A.x - A.w < translation * A.vx) {
+            translation = (this.maxX - A.x - A.w) / A.vx;
+        }
+        if(A.vy < 0 && this.minY - A.y > translation * A.vy) {
+            translation = (this.minY - A.y) / A.vy; 
+        } else if(A.vy > 0 && this.maxY - A.y - A.h < translation * A.vy) {
+            translation = (this.maxY - A.y - A.h) / A.vy;
+        }
         if(translation < 0) {
             translation = 0;
         }
@@ -233,8 +320,26 @@ class Level {
             }
         }
     }
+    onEdge(A, side, pos, dim, v, otherV, _escape, boo) {
+        A.touchingStatic[side] = true;
+        if(boo) {
+            if(A === this.player && this.leavingTo === null) {
+                for(const escape of this.escapes[side]) {
+                    if(pos >= escape.lowerBound && pos + dim <= escape.upperBound) {
+                        this.escapingSide = side;
+                        escape.to.escapingSide = side;
+                        this.leavingTo = escape;
+                        A[v] = _escape;
+                        A[otherV] = 0;
+                        cover.style.display = "block";
+                        return;
+                    }
+                }
+            }
+            A[v] = 0;
+        }
+    }
     updateCollisions(dt) {
-        
         for(let i = 0; i < this.movingBlocks.length; i++) {
             this.movingBlocks[i].markedX = false; // used as placeholder, will be set to true
             this.movingBlocks[i].markedY = true;
@@ -261,71 +366,121 @@ class Level {
         for(let i = 0; i < this.movingBlocks.length; i++) {
             const A = this.movingBlocks[i];
             if(A.translation != 0 && (A.vx != 0 || A.vy != 0)) {
-                this.preliminaryCollisionAdjustment(A);
+                if(A === this.player && this.leavingTo !== null) {
+                    const name = this.escapingSide == 0 || this.escapingSide == 3 ? "x" : "y";
+                    A[name] += escapeVelocity * dt * ((this.escapingSide % 2 == 0) ? -1 : 1);
+                    this.updatePose(A.x, A.y, A.element);
+                    let diff = 0;
+                    if(this.escapingSide % 2 == 0) {
+                        if(this.leavingTo == 1) {
+                            diff = A[name] - this[bounds[3 - this.escapingSide]] + 5;
+                        } else {
+                            diff = A[name] - this[bounds[this.escapingSide]] + 10;
+                        }
+                    } else {
+                        if(this.leavingTo == 1) {
+                            diff = this[bounds[3 - this.escapingSide]] - A[name];
+                        } else {
+                            diff = this[bounds[this.escapingSide]] + 5 - A[name];
+                        }
+                    }
+                    if(diff <= 0) {
+                        if(this.leavingTo == 1) {
+                            this.leavingTo = null;
+                            cover.style.display = "none";
+                        } else {
+                            this.fullyLeft = true;
+                        }
+                    } else {
+                        cover.style.opacity = `${this.leavingTo == 1 ? diff*12 : (120 - diff*12)}%`;
+                    }
+                    
+                } else {
+                    this.preliminaryCollisionAdjustment(A);
+                }
             }
         }
-        
         const starters = [[], [], [], []];
+        if(this.leavingTo !== null) {
+            this.player.markedX = true;
+        }
         for(let i = 0; i < this.movingBlocks.length; i++) {
             const A = this.movingBlocks[i];
-            A.vx += A.ax * dt;
-            const xSign = Math.sign(A.vx);
-            if(A.vx * xSign > maximumVelocity) {
-                A.vx = maximumVelocity * xSign;
-            }
-            A.vy += A.ay * dt;
-            const ySign = Math.sign(A.vy);
-            if(A.vy * ySign > maximumVelocity) {
-                A.vy = maximumVelocity * ySign;
-            }
-            for(let j = 0; j < this.blocks.length; j++) {
-                const B = this.blocks[j];
-                const isMoving = B instanceof MovingBlock;
-                if(!B.markedX) {
-                    if(this.getXTranslationDistance(A, B, B.x) === true) {
-                        if(epsilonEquals(A.y, B.y + B.h)) {
-                            this.updateTouching(A, 2, B, isMoving);
-                            if(!isMoving && A.vy < 0) {
-                                A.vy = 0;
+            if(A !== this.player || this.leavingTo === null) {
+                
+                A.vx += A.ax * dt;
+                const xSign = Math.sign(A.vx);
+                if(A.vx * xSign > maximumVelocity) {
+                    A.vx = maximumVelocity * xSign;
+                }
+                A.vy += A.ay * dt;
+                const ySign = Math.sign(A.vy);
+                if(A.vy * ySign > maximumVelocity) {
+                    A.vy = maximumVelocity * ySign;
+                }
+                if(epsilonEquals(A.y, this.minY)) {
+                    this.onEdge(A, 2, A.x, A.w, "vy", "vx", -escapeVelocity, A.vy < 0);
+                } else if(epsilonEquals(A.y + A.h, this.maxY)) {
+                    this.onEdge(A, 1, A.x, A.w, "vy", "vx", escapeVelocity, A.vy > 0);
+                }
+                if(epsilonEquals(A.x, this.minX)) {
+                    this.onEdge(A, 0, A.y, A.h, "vx", "vy", -escapeVelocity, A.vx < 0);
+                } else if(epsilonEquals(A.x + A.w, this.maxX)) {
+                    this.onEdge(A, 3, A.y, A.h, "vx", "vy", escapeVelocity, A.vx > 0);
+                }
+                for(let j = 0; j < this.blocks.length; j++) {
+                    const B = this.blocks[j];
+                    const isMoving = B instanceof MovingBlock;
+                    if(!B.markedX) {
+                        if(this.getXTranslationDistance(A, B, B.x) === true) {
+                            if(epsilonEquals(A.y, B.y + B.h)) {
+                                this.updateTouching(A, 2, B, isMoving);
+                                if(!isMoving && A.vy < 0) {
+                                    A.vy = 0;
+                                }
+                            } else if(epsilonEquals(A.y + A.h, B.y)) {
+                                this.updateTouching(A, 1, B, isMoving);
+                                if(!isMoving && A.vy > 0) {
+                                    A.vy = 0;
+                                }
                             }
-                        } else if(epsilonEquals(A.y + A.h, B.y)) {
-                            this.updateTouching(A, 1, B, isMoving);
-                            if(!isMoving && A.vy > 0) {
-                                A.vy = 0;
-                            }
-                        }
-                    } else if(this.getYTranslationDistance(A, B, B.y) === true) {
-                        if(epsilonEquals(A.x, B.x + B.w)) {
-                            this.updateTouching(A, 0, B, isMoving);
-                            if(!isMoving && A.vx < 0) {
-                                A.vx = 0;
-                            }
-                        } else if(epsilonEquals(A.x + A.w, B.x)) {
-                            this.updateTouching(A, 3, B, isMoving);
-                            if(!isMoving && A.vx > 0) {
-                                A.vx = 0;
+                        } else if(this.getYTranslationDistance(A, B, B.y) === true) {
+                            if(epsilonEquals(A.x, B.x + B.w)) {
+                                this.updateTouching(A, 0, B, isMoving);
+                                if(!isMoving && A.vx < 0) {
+                                    A.vx = 0;
+                                }
+                            } else if(epsilonEquals(A.x + A.w, B.x)) {
+                                this.updateTouching(A, 3, B, isMoving);
+                                if(!isMoving && A.vx > 0) {
+                                    A.vx = 0;
+                                }
                             }
                         }
                     }
                 }
-            }
-            
-            A.markedX = true;
-            for(let i = 0; i < 4; i++) {
-                const horizontal = i == 0 || i == 3;
-                const relevantVelocity = horizontal ? "vx" : "vy";
-                if(A.touching[i].length > 0 && this.isMatching(A[relevantVelocity], i)) {
-                    let broken = false;
-                    for(const otherTouching of A.touching[3 - i]) {
-                        if(!this.isMatching(A[relevantVelocity] - otherTouching[relevantVelocity], i)) {
-                            broken = true;
-                            break;
+                A.markedX = true;
+                for(let i = 0; i < 4; i++) {
+                    const horizontal = i == 0 || i == 3;
+                    const relevantVelocity = horizontal ? "vx" : "vy";
+                    if(A.touching[i].length > 0 && this.isMatching(A[relevantVelocity], i)) {
+                        let broken = false;
+                        for(const otherTouching of A.touching[3 - i]) {
+                            if(!this.isMatching(A[relevantVelocity] - otherTouching[relevantVelocity], i)) {
+                                broken = true;
+                                break;
+                            }
+                        }
+                        if(!broken) {
+                            starters[i].push(A);
                         }
                     }
-                    if(!broken) {
-                        starters[i].push(A);
-                    }
                 }
+            }
+        }
+        for(const block of this.blocks) {
+            if(block.updates && (block !== this.player || this.leavingTo === null)) {
+                block.update(dt);
             }
         }
         for(let i = 0; i < 4; i++) {
@@ -338,9 +493,8 @@ class Level {
         }
     }
     unload(game) {
+        this.element.removeChild(this.player.element);
         game.removeChild(this.element);
-        this.element.remove();
-        this.resetElement();
     }
 }
 export default Level;

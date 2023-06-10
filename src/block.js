@@ -9,12 +9,14 @@ class Block {
         this.element.classList.add(classname);
         this.updateScale();
     }
+    reset() {}
     update() {}
     updateScale() {
         this.element.style.width = `${this.w}vw`;
         this.element.style.height = `${this.h}vw`;
     }
     initialize(level) {
+        console.log(this.element);
         level.element.appendChild(this.element);
     }
 }

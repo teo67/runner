@@ -3,7 +3,7 @@
     font-family: "Verdana";
 }
 html {
-    background-color: #ffc2e2;
+    background-color: #6e44ff;
 }
 body {
     overflow: hidden;
@@ -27,8 +27,8 @@ nav#menu button {
 }
 div.level {
     position: absolute;
-    overflow: hidden;
     z-index: -1;
+    background-color: #ffc2e2;
 }
 div.block {
     position: absolute;
@@ -42,6 +42,7 @@ div.movingblock {
 div.player {
     width: 5vw;
     height: 5vw;
+    z-index: 7;
     background-color: transparent;
     border: 1vw solid #b892ff;
     position: absolute;
@@ -56,4 +57,47 @@ h1#FPS {
     background-color: lightgreen;
     padding: 1vw;
     border-radius: 1vw;
+}
+div.escape {
+    position: absolute;
+    z-index: 10;
+    content: "";
+    width: 5vw;
+    height: 5vw;
+}
+div.behindEscape {
+    position: absolute;
+    width: 5vw;
+    height: 5vw;
+    content: "";
+    z-index: 5;
+    background-color: #ffc2e2;
+}
+div.escape.a0 {
+    background: linear-gradient(270deg, rgba(110, 68, 255, 0) 0%, rgba(110, 68, 255, 1) 100%);
+}
+div.escape.a1 {
+    background: linear-gradient(0deg, rgba(110, 68, 255, 0) 0%, rgba(110, 68, 255, 1) 100%);
+}
+div.escape.a2 {
+    background: linear-gradient(180deg, rgba(110, 68, 255, 0) 0%, rgba(110, 68, 255, 1) 100%);
+}
+div.escape.a3 {
+    background: linear-gradient(90deg, rgba(110, 68, 255, 0) 0%, rgba(110, 68, 255, 1) 100%);
+}
+div.boundary {
+    z-index: 10;
+    position: absolute;
+    background-color: rgba(110, 68, 255, 1);
+}
+div#cover {
+    display: none;
+    z-index: 15;
+    background-color: rgba(110, 68, 255, 1);
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    opacity: 0;
 }

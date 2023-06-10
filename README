@@ -1,0 +1,7 @@
+todo:
+
+level transition animation
+two-way level transition structure
+selective options for blocks structure (collides, affected by other blocks, touching type, etc)
+level builder and exporter
+selective level load structure (use JSON?)

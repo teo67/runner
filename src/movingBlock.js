@@ -2,6 +2,8 @@ import Block from './block.js';
 class MovingBlock extends Block {
     constructor(x, y, w, h, m, gravity = true, classname = "movingblock") {
         super(x, y, w, h, classname);
+        this.startX = x;
+        this.startY = y;
         this.m = m;
         this.vx = 0;
         this.vy = 0;
@@ -13,8 +15,12 @@ class MovingBlock extends Block {
         this.markedX = false;
         this.markedY = false;
         if(gravity) {
-            this.applyConstantForce(0, -15 * this.m);
+            this.applyConstantForce(0, -45 * this.m);
         }
+    }
+    reset() {
+        this.x = this.startX;
+        this.y = this.startY;
     }
     applyConstantForce(x, y) {
         this.ax += x/this.m;
