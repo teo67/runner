@@ -7,10 +7,12 @@ updates
 */
 class Block {
     constructor(x, y, w, h, classname = "block") {
-        this.x = x;
-        this.y = y;
-        this.w = w;
-        this.h = h;
+        this.x = {};
+        this.y = {};
+        this.x.position = x;
+        this.y.position = y;
+        this.x.size = w;
+        this.y.size = h;
         this.updates = false;
         this.element = document.createElement("div");
         this.element.classList.add(classname);
@@ -19,8 +21,8 @@ class Block {
     reset() {}
     update() {}
     updateScale() {
-        this.element.style.width = `${this.w}vw`;
-        this.element.style.height = `${this.h}vw`;
+        this.element.style.width = `${this.x.size}vw`;
+        this.element.style.height = `${this.y.size}vw`;
     }
     initialize(level) {
         level.element.appendChild(this.element);

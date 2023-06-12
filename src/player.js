@@ -21,7 +21,7 @@ class Player extends MovingBlock {
     }
     update(dt) {
         if(this.keysDown[killkey]) {
-            throw "killed";
+            throw "killed"; // for testing
         }
         let fx = 0;
         let fy = 0;
@@ -30,18 +30,18 @@ class Player extends MovingBlock {
                 fy++;
             } else if(this.touchingStatic[2] || this.touching[2].length > 0) {
                 this.jumpCharge = 0;
-                this.vy = 23;
-                this.ay = 0;
+                this.y.velocity = 23;
+                this.y.acceleration = 0;
             } else if(this.jumpCharge >= 0) {
                 this.jumpCharge += dt;
                 if(this.jumpCharge >= jumpLimit) {
                     this.jumpCharge = -1;
-                    this.applyConstantForce(0, -45 * this.m);
+                    this.applyConstantForce(-45 * this.m, 'y');
                 }
             }
         } else if(this.jumpCharge != -1) {
             this.jumpCharge = -1;
-            this.applyConstantForce(0, -45 * this.m);
+            this.applyConstantForce(-45 * this.m, 'y');
         }
         if(this.keysDown["a"]) {
             fx--;
@@ -52,8 +52,8 @@ class Player extends MovingBlock {
         if(this.keysDown["d"]) {
             fx++;
         }
-        //console.log(fy);
-        this.applyConstantForce(forceDueToKeyX * (fx - this.keyFx), forceDueToKeyY * (fy - this.keyFy));
+        this.applyConstantForce(forceDueToKeyX * (fx - this.keyFx), 'x');
+        this.applyConstantForce(forceDueToKeyY * (fy - this.keyFy), 'y');
         this.keyFx = fx;
         this.keyFy = fy;
     }

@@ -8,27 +8,34 @@ const game = document.getElementById("game");
 const fpsCounter = document.getElementById("FPS");
 
 const player = new Player();
-const slider = new MovingBlock(-15, 10, 10, 5, 5, false);
-slider.vx = 10;
-slider.receivesMomentumX = false;
-slider.receivesMomentumY = true;
+const slider = new MovingBlock(-10, 10, 5, 5, 5, false);
+slider.x.velocity = 10;
+slider.xreceivesMomentum = false;
+slider.yreceivesMomentum = false;
 const slider2 = new MovingBlock(0, 10, 10, 5, 5, false);
-slider2.vx = 5;
-slider2.receivesMomentumX = false;
-slider2.receivesMomentumY = false;
+slider2.x.velocity = 5;
+slider2.xreceivesMomentum = false;
+slider2.yreceivesMomentum = false;
+const a = new MovingBlock(-20, 5, 5, 10, 5, false);
+const b = new MovingBlock(-15, 5, 5, 5, 5, false);
+const c = new MovingBlock(-15, 10, 5, 5, 5, false);
+a.x.velocity = 10;
+b.x.velocity = 8;
+c.x.velocity = 0;
 const startScreen = new Level([
-    slider,
-    slider2,
-    // new MovingBlock(-15, 0, 10, 5, 5, false),
-    // new MovingBlock(-15, 5, 5, 5, 5, false),
-    // new MovingBlock(-15, 10, 5, 5, 5, false),
-    // new MovingBlock(-10, 5, 5, 5, 5, false),
-    // new MovingBlock(-15, 20, 5, 5, 5, false),
-    // new MovingBlock(-10, -10, 5, 10, 5, false),
+    // slider,
+    // slider2,
+    // a,
+    // b,
+    // c,
+    new MovingBlock(-15, 10, 5, 5, 5, false),
+    new MovingBlock(-10, 5, 5, 5, 5, false),
+    new MovingBlock(-15, 20, 5, 5, 5, false),
+    new MovingBlock(-10, -10, 5, 10, 5, false),
     // new MovingBlock(-5, -10, 5, 5, 5, false),
     // new MovingBlock(-5, -5, 5, 5, 5, false),
     // new MovingBlock(0, -10, 5, 5, 5, false),
-    // new Wall(10, -5, 5, 5)
+    new Wall(25, -5, 5, 5)
 ], player);
 startScreen.setBoundaries(-30, 35, -10, 50);
 const second = new Level([new Wall(0, 0, 5, 5)], player);
@@ -40,6 +47,7 @@ level.load(game, 0, 0, true);
 let lastTime = Date.now();
 let frameCount = 0;
 let nextSecond = Math.ceil(Date.now()/1000) * 1000;
+level.updateCollisions(0, true);
 const run = () => {
     frameCount++;
     const ntime = Date.now();

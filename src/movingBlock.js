@@ -3,42 +3,40 @@ class MovingBlock extends Block {
     
     constructor(x, y, w, h, m, gravity = true, classname = "movingblock") {
         super(x, y, w, h, classname);
-        this.startX = x;
-        this.startY = y;
+        this.x.start = x;
+        this.y.start = y;
         this.m = m;
-        this.vx = 0;
-        this.vy = 0;
-        this.ax = 0;
-        this.ay = 0;
+        this.x.velocity = 0;
+        this.y.velocity = 0;
+        this.x.acceleration = 0;
+        this.y.acceleration = 0;
         this.touching = [[], [], [], []];
         this.touchingStatic = [false, false, false, false];
-        this.minVelocities = [null, null, null, null];
+        this.minVelocity = null;
         this.translation = 0;
-        this.markedX = false;
-        this.markedY = false;
+        this.x.marked = false;
+        this.y.marked = false;
         if(gravity) {
-            this.applyConstantForce(0, -45 * this.m);
+            this.applyConstantForce(-45 * this.m, 'y');
         }
     }
     reset() {
-        this.x = this.startX;
-        this.y = this.startY;
+        this.x.position = this.x.start;
+        this.y.position = this.y.start;
     }
-    applyConstantForce(x, y) {
-        this.ax += x/this.m;
-        this.ay += y/this.m;
+    applyConstantForce(f, direction) {
+        this[direction].acceleration += f/this.m;
     }
-    removeConstantForce(x, y) {
-        this.applyConstantForce(-x, -y);
+    removeConstantForce(f, direction) {
+        this.applyConstantForce(-f, direction);
     }
-    applyForceForTime(fx, fy, dt) {
-        this.vx += fx*dt/this.m;
-        this.vy += fy*dt/this.m;
+    applyForceForTime(f, direction, dt) {
+        this[direction].velocity += f*dt/this.m;
     }
 }
 MovingBlock.prototype.moves = true;
-MovingBlock.prototype.receivesMomentumX = true;
-MovingBlock.prototype.receivesMomentumY = true;
+MovingBlock.prototype.xreceivesMomentum = true;
+MovingBlock.prototype.yreceivesMomentum = true;
 MovingBlock.prototype.touchesOthers = true;
 MovingBlock.prototype.touchable = true;
 MovingBlock.prototype.updates = false;
