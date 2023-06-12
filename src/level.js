@@ -1,4 +1,3 @@
-import MovingBlock from './movingBlock.js';
 import Escape from './escape.js';
 import epsilonEquals from './epsilonEquals.js';
 const maximumReasonableTranslation = 2;
@@ -10,17 +9,12 @@ class Level {
     constructor(blocks, player) {
         this.player = player;
         this.blocks = blocks;
-        this.movingBlocks = [];
         this.element = document.createElement("div");
         this.element.classList.add("level");
         for(const block of this.blocks) {
             block.initialize(this);
-            if(block instanceof MovingBlock) {
-                this.movingBlocks.push(block);
-            }
         }
         this.blocks.push(player);
-        this.movingBlocks.push(player);
         
         
         this.minX = 0;
@@ -242,7 +236,7 @@ class Level {
             const B = this.blocks[j];
             if(A !== B) {
                 let collisionPoint = this.getCollisionPoint(A, B, false);
-                if(B instanceof MovingBlock && B.translation != 0 && (B.vx != 0 || B.vy != 0)) {
+                if(B.moves && B.translation != 0 && (B.vx != 0 || B.vy != 0)) {
                     const minCollisionPoint = this.getCollisionPoint(A, B, true, B.vx * B.translation, B.vy * B.translation);
                     if(collisionPoint !== false && (minCollisionPoint === false || minCollisionPoint > collisionPoint)) {
                         this.preliminaryCollisionAdjustment(B);
@@ -274,32 +268,64 @@ class Level {
         this.updatePose(A.x, A.y, A.element);
         A.translation = 0;
     }
-    updateTouching(A, i, B, isMoving) {
-        if(isMoving) {
-            A.touching[i].push(B);
-            B.touching[3 - i].push(A);
-        } else {
-            A.touchingStatic[i] = true;
+    updateTouching(A, i, B, v, mo, bool) {
+        if(A.touchable && B.touchesOthers) {
+            if(A.moves && A[mo]) {
+                B.touching[i].push(A);
+            } else {
+                B.touchingStatic[i] = true;
+                if(bool && B[mo] && B.moves) {
+                    B[v] = 0;
+                }
+            }
         }
     }
     isMatching(value, i) {
         return value != 0 && (value < 0) == (i % 2 == 0);
     }
-    chainMomentum(starter, info, i, horizontal, total, starters) {
-        info.connected.push(starter);
-        info.totalMass += starter.m;
-        const savedMass = info.totalMass;
-        const adding = (horizontal ? starter.vx : starter.vy) * starter.m;
-        info.total += adding;
-        for(const connection of starter.touching[i]) {
-            const nextMoment = horizontal ? connection.vx : connection.vy;
-            const diff = (total + adding)/savedMass - nextMoment;
-            if(epsilonEquals(diff, 0) || this.isMatching(diff, i)) {
-                this.chainMomentum(connection, info, i, horizontal, total + adding, starters);
-            }
+    getMinVelocities(starter, i, horizontal) {
+        if(starter.minVelocities[i] !== null) {
+            return;
         }
         if(starter.touchingStatic[i]) {
-            info.static = true;
+            starter.minVelocities[i] = 0;
+            return;
+        }
+        let minimum = Number.POSITIVE_INFINITY;
+        for(const connection of starter.touching[i]) {
+            this.getMinVelocities(connection, i);
+            if(connection.minVelocities[i] < minimum) {
+                minimum = connection.minVelocities[i];
+            }
+        }
+        const receives = horizontal ? starter.receivesMomentumX : starter.receivesMomentumY;
+        if(!receives) {
+            const velocity = horizontal ? starter.vx : starter.vy;
+            const multiplier = (i % 2 == 0) ? -1 : 1;
+            if(velocity * multiplier < minimum) {
+                minimum = velocity * multiplier;
+            }
+        }
+        starter.minVelocities[i] = minimum;
+    }
+    chainMomentum(starter, i, horizontal, momentumInfo, totalMass, totalMomentum, starting) {
+        const multiplier = (i % 2 == 0) ? -1 : 1;
+        const adding = (horizontal ? starter.vx : starter.vy) * starter.m;
+        let theoreticalVelocity = multiplier * (totalMomentum + adding) / (totalMass + starter.m);
+        if(starter.minVelocities[i] < theoreticalVelocity) {
+            theoreticalVelocity = starter.minVelocities[i];
+        }
+        for(const connection of starter.touching[i]) {
+            let nextMoment = horizontal ? connection.vx : connection.vy;
+            nextMoment *= multiplier;
+            if(connection.minVelocities[i] < nextMoment) {
+                nextMoment = connection.minVelocities[i];
+            }
+            if(!epsilonEquals(theoreticalVelocity, nextMoment) || theoreticalVelocity > nextMoment) {
+                this.chainMomentum(connection, i, horizontal, momentumInfo, totalMass + starter.m, totalMomentum + adding, false);
+            } else {
+
+            }
         }
     }
     handleMomentum(starter, i, relevantMarking, relevantVelocity, horizontal, starters) {
@@ -307,15 +333,18 @@ class Level {
             let momentumInfo = {
                 total: 0,
                 totalMass: 0,
-                connected: [], 
-                static: false
+                connected: []
             };
-            this.chainMomentum(starter, momentumInfo, i, horizontal, 0, starters);
-            if(momentumInfo.connected.length > 1 && (momentumInfo.total == 0 || (momentumInfo.total < 0) == (i % 2 == 0))) {
-                const settingVelocity = momentumInfo.static ? 0 : (momentumInfo.total / momentumInfo.totalMass);
-                for(const item of momentumInfo.connected) {
-                    item[relevantVelocity] = settingVelocity;
-                    item[relevantMarking] = false;
+            this.reportTemporaryStatic(starter, i); // load all static counters
+            this.chainMomentum(starter, momentumInfo, i, horizontal, 0, 0, starters);
+            const settingVelocity = starter.temporaryStaticCounter ? 0 : momentumInfo.total / momentumInfo.totalMass;
+            if(starter.temporaryStaticCounter || (momentumInfo.connected.length > 1 && (momentumInfo.total == 0 || (momentumInfo.total < 0) == (i % 2 == 0)))) {
+                for(const connected of momentumInfo.connected) {
+                    connected[relevantVelocity] = settingVelocity;
+                    connected[relevantMarking] = false;
+                    if(connected.temporaryStaticCounter) {
+                        delete connected.temporaryStaticCounter;
+                    }
                 }
             }
         }
@@ -340,63 +369,70 @@ class Level {
         }
     }
     updateCollisions(dt) {
-        for(let i = 0; i < this.movingBlocks.length; i++) {
-            this.movingBlocks[i].markedX = false; // used as placeholder, will be set to true
-            this.movingBlocks[i].markedY = true;
-            this.movingBlocks[i].touching = [[], [], [], []]; // left, up, down, right (other block is on the left, other block is above, etc.)
-            this.movingBlocks[i].touchingStatic = [false, false, false, false];
-
-            let ratio = 1;
-            const absX = Math.abs(this.movingBlocks[i].vx);
-            const absY = Math.abs(this.movingBlocks[i].vy);
-            if(absX > absY) {
-                ratio = maximumReasonableTranslation / (absX * dt);
-            } else {
-                ratio = maximumReasonableTranslation / (absY * dt);
+        for(const block of this.blocks) {
+            if(block.touchesOthers) {
+                block.touching = [[], [], [], []]; // left, up, down, right (other block is on the left, other block is above, etc.)
+                block.touchingStatic = [false, false, false, false];
+                block.minVelocities = [null, null, null, null];
             }
-            this.movingBlocks[i].translation = dt;
-            if(ratio < 1) {
-                console.log("L + Ratio");
-                console.log(absX);
-                console.log(absY);
-                console.log(dt);
-                this.movingBlocks[i].translation *= ratio;
+            if(block.moves) {
+                if(block.receivesMomentumX || block.receivesMomentumY) {
+                    block.markedX = true; // used as placeholder, will be set to true
+                    block.markedY = true;
+                }
+                let ratio = 1;
+                const absX = Math.abs(block.vx);
+                const absY = Math.abs(block.vy);
+                if(absX > absY) {
+                    ratio = maximumReasonableTranslation / (absX * dt);
+                } else {
+                    ratio = maximumReasonableTranslation / (absY * dt);
+                }
+                block.translation = 0.01;
+                if(ratio < 1) {
+                    console.log("L + Ratio");
+                    console.log(absX);
+                    console.log(absY);
+                    console.log(dt);
+                    block.translation *= ratio;
+                }
             }
         }
-        for(let i = 0; i < this.movingBlocks.length; i++) {
-            const A = this.movingBlocks[i];
-            if(A.translation != 0 && (A.vx != 0 || A.vy != 0)) {
-                if(A === this.player && this.leavingTo !== null) {
-                    const name = this.escapingSide == 0 || this.escapingSide == 3 ? "x" : "y";
-                    A[name] += escapeVelocity * dt * ((this.escapingSide % 2 == 0) ? -1 : 1);
-                    this.updatePose(A.x, A.y, A.element);
-                    let diff = 0;
-                    if(this.escapingSide % 2 == 0) {
-                        if(this.leavingTo == 1) {
-                            diff = A[name] - this[bounds[3 - this.escapingSide]] + 5;
+        for(const A of this.blocks) {
+            if(A.moves) {
+                if(A.translation != 0 && (A.vx != 0 || A.vy != 0)) {
+                    if(A === this.player && this.leavingTo !== null) {
+                        const name = this.escapingSide == 0 || this.escapingSide == 3 ? "x" : "y";
+                        A[name] += escapeVelocity * dt * ((this.escapingSide % 2 == 0) ? -1 : 1);
+                        this.updatePose(A.x, A.y, A.element);
+                        let diff = 0;
+                        if(this.escapingSide % 2 == 0) {
+                            if(this.leavingTo == 1) {
+                                diff = A[name] - this[bounds[3 - this.escapingSide]] + 5;
+                            } else {
+                                diff = A[name] - this[bounds[this.escapingSide]] + 10;
+                            }
                         } else {
-                            diff = A[name] - this[bounds[this.escapingSide]] + 10;
+                            if(this.leavingTo == 1) {
+                                diff = this[bounds[3 - this.escapingSide]] - A[name];
+                            } else {
+                                diff = this[bounds[this.escapingSide]] + 5 - A[name];
+                            }
                         }
+                        if(diff <= 0) {
+                            if(this.leavingTo == 1) {
+                                this.leavingTo = null;
+                                cover.style.display = "none";
+                            } else {
+                                this.fullyLeft = true;
+                            }
+                        } else {
+                            cover.style.opacity = `${this.leavingTo == 1 ? diff*12 : (120 - diff*12)}%`;
+                        }
+                        
                     } else {
-                        if(this.leavingTo == 1) {
-                            diff = this[bounds[3 - this.escapingSide]] - A[name];
-                        } else {
-                            diff = this[bounds[this.escapingSide]] + 5 - A[name];
-                        }
+                        this.preliminaryCollisionAdjustment(A);
                     }
-                    if(diff <= 0) {
-                        if(this.leavingTo == 1) {
-                            this.leavingTo = null;
-                            cover.style.display = "none";
-                        } else {
-                            this.fullyLeft = true;
-                        }
-                    } else {
-                        cover.style.opacity = `${this.leavingTo == 1 ? diff*12 : (120 - diff*12)}%`;
-                    }
-                    
-                } else {
-                    this.preliminaryCollisionAdjustment(A);
                 }
             }
         }
@@ -404,10 +440,8 @@ class Level {
         if(this.leavingTo !== null) {
             this.player.markedX = true;
         }
-        for(let i = 0; i < this.movingBlocks.length; i++) {
-            const A = this.movingBlocks[i];
-            if(A !== this.player || this.leavingTo === null) {
-                
+        for(const A of this.blocks) {
+            if(A.moves && (A !== this.player || this.leavingTo === null)) {
                 A.vx += A.ax * dt;
                 const xSign = Math.sign(A.vx);
                 if(A.vx * xSign > maximumVelocity) {
@@ -418,6 +452,7 @@ class Level {
                 if(A.vy * ySign > maximumVelocity) {
                     A.vy = maximumVelocity * ySign;
                 }
+            
                 if(epsilonEquals(A.y, this.minY)) {
                     this.onEdge(A, 2, A.x, A.w, "vy", "vx", -escapeVelocity, A.vy < 0);
                 } else if(epsilonEquals(A.y + A.h, this.maxY)) {
@@ -428,51 +463,77 @@ class Level {
                 } else if(epsilonEquals(A.x + A.w, this.maxX)) {
                     this.onEdge(A, 3, A.y, A.h, "vx", "vy", escapeVelocity, A.vx > 0);
                 }
-                for(let j = 0; j < this.blocks.length; j++) {
-                    const B = this.blocks[j];
-                    const isMoving = B instanceof MovingBlock;
-                    if(!B.markedX) {
-                        if(this.getXTranslationDistance(A, B, B.x) === true) {
-                            if(epsilonEquals(A.y, B.y + B.h)) {
-                                this.updateTouching(A, 2, B, isMoving);
-                                if(!isMoving && A.vy < 0) {
-                                    A.vy = 0;
+            }
+        }
+        for(let i = 0; i < this.blocks.length; i++) {
+            const A = this.blocks[i];
+            if(A !== this.player || this.leavingTo === null) {
+                if(A.touchable || A.touchesOthers) {
+                    for(let j = i + 1; j < this.blocks.length; j++) {
+                        const B = this.blocks[j];
+                        if((B.touchable && A.touchesOthers) || (A.touchable && B.touchesOthers)) {
+                            const rightAbove = epsilonEquals(A.y, B.y + B.h);
+                            const rightBelow = epsilonEquals(A.y + A.h, B.y);
+                            const onTheRight = epsilonEquals(A.x, B.x + B.w);
+                            const onTheLeft = epsilonEquals(A.x + A.w, B.x);
+                            let skip = false;
+                            if(A.touchable && B.touchable) {
+                                if(A.moves && A.touchesOthers && ((rightAbove && A.vy < 0) || (rightBelow && A.vy > 0)) && ((onTheRight && A.vx < 0) || (onTheLeft && A.vx > 0))) {
+                                    if(A.receivesMomentumX) {
+                                        A.vx = 0;
+                                    }
+                                    if(A.receivesMomentumY) {
+                                        A.vy = 0;
+                                    }
+                                    skip = true;
                                 }
-                            } else if(epsilonEquals(A.y + A.h, B.y)) {
-                                this.updateTouching(A, 1, B, isMoving);
-                                if(!isMoving && A.vy > 0) {
-                                    A.vy = 0;
+                                if(B.moves && B.touchesOthers && ((rightAbove && B.vy > 0) || (rightBelow && B.vy < 0)) && ((onTheRight && B.vx > 0) || (onTheLeft && B.vx < 0))) {
+                                    if(B.receivesMomentumX) {
+                                        B.vx = 0;
+                                    }
+                                    if(B.receivesMomentumY) {
+                                        B.vy = true;
+                                    }
+                                    skip = true;
                                 }
-                            }
-                        } else if(this.getYTranslationDistance(A, B, B.y) === true) {
-                            if(epsilonEquals(A.x, B.x + B.w)) {
-                                this.updateTouching(A, 0, B, isMoving);
-                                if(!isMoving && A.vx < 0) {
-                                    A.vx = 0;
-                                }
-                            } else if(epsilonEquals(A.x + A.w, B.x)) {
-                                this.updateTouching(A, 3, B, isMoving);
-                                if(!isMoving && A.vx > 0) {
-                                    A.vx = 0;
+                            } 
+                            if(!skip) {
+                                if(this.getXTranslationDistance(A, B, B.x) === true) {
+                                    if(rightAbove) {
+                                        this.updateTouching(A, 1, B, 'vy', 'receivesMomentumY', B.vy > 0);
+                                        this.updateTouching(B, 2, A, 'vy', 'receivesMomentumY', A.vy < 0);
+                                    } else if(rightBelow) {
+                                        this.updateTouching(A, 2, B, 'vy', 'receivesMomentumY', B.vy < 0);
+                                        this.updateTouching(B, 1, A, 'vy', 'receivesMomentumY', A.vy > 0);
+                                    }
+                                } else if(this.getYTranslationDistance(A, B, B.y) === true) {
+                                    if(onTheRight) {
+                                        this.updateTouching(A, 3, B, 'vx', 'receivesMomentumX', B.vx > 0);
+                                        this.updateTouching(B, 0, A, 'vx', 'receivesMomentumX', A.vx < 0);
+                                    } else if(onTheLeft) {
+                                        this.updateTouching(A, 0, B, 'vx', 'receivesMomentumX', B.vx < 0);
+                                        this.updateTouching(B, 3, A, 'vx', 'receivesMomentumX', A.vx > 0);
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                A.markedX = true;
-                for(let i = 0; i < 4; i++) {
-                    const horizontal = i == 0 || i == 3;
-                    const relevantVelocity = horizontal ? "vx" : "vy";
-                    if(A.touching[i].length > 0 && this.isMatching(A[relevantVelocity], i)) {
-                        let broken = false;
-                        for(const otherTouching of A.touching[3 - i]) {
-                            if(!this.isMatching(A[relevantVelocity] - otherTouching[relevantVelocity], i)) {
-                                broken = true;
-                                break;
+                if(A.touchesOthers && A.moves) {
+                    for(let i = 0; i < 4; i++) {
+                        const horizontal = i == 0 || i == 3;
+                        const relevantVelocity = horizontal ? "vx" : "vy";
+                        if(A.touching[i].length > 0 && this.isMatching(A[relevantVelocity], i)) {
+                            let broken = false;
+                            for(const otherTouching of A.touching[3 - i]) {
+                                if(this.isMatching(otherTouching[relevantVelocity], i)) {
+                                    broken = true;
+                                    break;
+                                }
                             }
-                        }
-                        if(!broken) {
-                            starters[i].push(A);
+                            if(!broken) {
+                                starters[i].push(A);
+                            }
                         }
                     }
                 }
@@ -491,6 +552,7 @@ class Level {
                 this.handleMomentum(starters[i][j], i, relevantMarking, relevantVelocity, horizontal, starters);
             }
         }
+        
     }
     unload(game) {
         this.element.removeChild(this.player.element);

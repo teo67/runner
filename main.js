@@ -8,14 +8,20 @@ const game = document.getElementById("game");
 const fpsCounter = document.getElementById("FPS");
 
 const player = new Player();
+const slider = new MovingBlock(-15, 30, 10, 5, 5, false);
+slider.vx = 5;
+slider.receivesMomentumX = false;
+slider.receivesMomentumY = true;
+const first = new MovingBlock(-20, -10, 5, 5, 5, false);
+first.vx = 6;
 const startScreen = new Level([
-    new Wall(-5, -5, 15, 5),
-    new Wall(-30, 0, 10, 5),
-    new Wall(-25, 18, 20, 2),
-    new Wall(25, 8, 10, 2),
-    new Wall(15, -10, 2, 30),
-    new Wall(17, -5, 5, 2),
-    new Wall(30, 28, 5, 2)
+    first,
+    new MovingBlock(-15, -10, 5, 5, 5, false),
+    new MovingBlock(-10, -10, 5, 10, 5, false),
+    new MovingBlock(-5, -10, 5, 5, 5, false),
+    new MovingBlock(-5, -5, 5, 5, 5, false),
+    new MovingBlock(0, -10, 5, 5, 5, false),
+    new Wall(10, -5, 5, 5)
 ], player);
 startScreen.setBoundaries(-30, 35, -10, 50);
 const second = new Level([new Wall(0, 0, 5, 5)], player);

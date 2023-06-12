@@ -1,3 +1,10 @@
+/* all options:
+moves
+touches others
+can be touched
+receives momentum
+updates
+*/
 class Block {
     constructor(x, y, w, h, classname = "block") {
         this.x = x;
@@ -16,7 +23,6 @@ class Block {
         this.element.style.height = `${this.h}vw`;
     }
     initialize(level) {
-        console.log(this.element);
         level.element.appendChild(this.element);
     }
 }

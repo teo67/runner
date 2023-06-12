@@ -5,3 +5,75 @@ two-way level transition structure
 selective options for blocks structure (collides, affected by other blocks, touching type, etc)
 level builder and exporter
 selective level load structure (use JSON?)
+
+
+
+CHANGE MOMENTUM SYSTEM (read all then implement CRAZY alternative)
+
+right now, this would take > 1 round to complete
+(5->)(10->)(10->)(5->)
+because block 3 is clearly not a starter, but the leftmost 5&10 (v = 7.5) collision will not collide with block 3
+so block 3 should be a starter and collide with block 4
+
+to fix:
+starters must have >0 connections in the forward direction, velocity in the forward direction, and no connections in the backward direction that have >0 velocity 
+whenever a momentum chain skips a possible connection because of too much velocity on the next node, add that node as a starter
+mark starters when their chain finishes even if it isn't successful, to make sure the exact same chain isn't run again
+
+possible other change: mark all nodes that become starters so that we can prevent adding them twice? not super important, just a thought
+
+this change also allows for momentum with blocks that aren't affected by others
+ - instead of keeping track of blocks that are rooted to a static block, keep track of the minimum velocity that they will have to switch to
+  ---- set to some placeholder value if not applicable, but if they are ever rooted to a lonely block, set it to that velocity if it's a minimum
+  ---- if they are ever rooted to a static block, set it to 0
+ - treat the block's min velocity as the velocity for the set when deciding to include new nodes in the chain
+ - at the end, if any min velocity was reached, set all blocks with a recorded min velocity to their min velocity
+
+ ex. (F = lonely)
+ a(20) -> {
+    b(20) -> { c(F5) }
+    d(20) -> { e(F10) }
+ }
+
+ a chain is traversed, a and b are set to min 5, d is set to min 10
+ a collides b collides c
+ a does not collide d, d is pushed
+ a, b, c all set to 5
+ d chain is traversed, d is set to min 10
+ d collides e
+ d, e all set to 10
+
+ Alternative:
+ allow chains that have a min value to keep other (larger) min values with them to save time, so in this example:
+
+ a chain is traversed, a and b are set to min 5, d is set to min 10
+ a collides b collides c
+ a makes an exception for d and d is added to connections
+ a, b, c all set to 5, d set to 10
+
+ CRAZY alternative::!!!!
+ abandon the outer function altogether except to start chains
+ in inner function, keep track of whether at the start of a chain
+ if at start of chain and function has run all the way through (e.g. fully run through chain)
+ then set all velocities (either using momentum, or to a single min velocity)
+ when a node is reached that has too high velocity, call the function on it but at the start of a new chain
+ calculate all min velocities before evaluating the chain in order to do it correcly
+ in this example:
+
+ a chain is traversed, a and b are set to min 5, d is set to min 10
+ a collides b collides c
+ a does not collide d, so new chain begins at d (indented)
+   since d min velocity is already calculated in this direction, the initial search is skipped
+   d collides e
+   both d and e are set to 5
+   d chain ends
+ a, b, c all set to 5
+
+ blocks have an array of minVelocities that parallels touching/touchingStatic (one for each direction)
+ they are cleared at the beginning of each round and used to cache calculations that have already been made
+
+ yo this system could be goated #iwakeup,nostylist #wokeupwitmytooliewhatitdo
+
+ UNRELATED CHANGE
+ for lonely blocks, set velocity to 0 when colliding with static or touching corner edge case to avoid bug,
+ but keep track of 'real' velocity and when they get out of collision, set velocity to real velocity

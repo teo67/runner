@@ -1,5 +1,6 @@
 import Block from './block.js';
 class MovingBlock extends Block {
+    
     constructor(x, y, w, h, m, gravity = true, classname = "movingblock") {
         super(x, y, w, h, classname);
         this.startX = x;
@@ -11,6 +12,7 @@ class MovingBlock extends Block {
         this.ay = 0;
         this.touching = [[], [], [], []];
         this.touchingStatic = [false, false, false, false];
+        this.minVelocities = [null, null, null, null];
         this.translation = 0;
         this.markedX = false;
         this.markedY = false;
@@ -34,4 +36,10 @@ class MovingBlock extends Block {
         this.vy += fy*dt/this.m;
     }
 }
+MovingBlock.prototype.moves = true;
+MovingBlock.prototype.receivesMomentumX = true;
+MovingBlock.prototype.receivesMomentumY = true;
+MovingBlock.prototype.touchesOthers = true;
+MovingBlock.prototype.touchable = true;
+MovingBlock.prototype.updates = false;
 export default MovingBlock;
