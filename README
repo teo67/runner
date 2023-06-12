@@ -6,6 +6,23 @@ selective options for blocks structure (collides, affected by other blocks, touc
 level builder and exporter
 selective level load structure (use JSON?)
 
+UPDATE: tried to implement this system, ran into problem
+take this scenario
+a(20) -> {
+  b(25) -> c(F5)
+  d(10)
+}
+with the current system:
+b sets min to 5
+a sets min to 5
+based on min, a doesn't collide with b or d, when it should've collided with d because not colliding with b should 'remove' its min velocity
+to fix, min velocity counter must somehow be based on the ongoing momentum calculation, which is difficult because the calculation in turn relies on min velocity
+for example:
+instead of calculating min velocities in a separate step, 
+find them every step of the way
+get the minimum ahead min velocity for a node, and if that velocity is smaller than the accumulated momentum velocity, set the current min to that velocity
+then based on that min, redo all calculations
+god the time complexity is gonna be insane on this
 
 
 CHANGE MOMENTUM SYSTEM (read all then implement CRAZY alternative)

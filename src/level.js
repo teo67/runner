@@ -270,11 +270,11 @@ class Level {
     }
     updateTouching(A, i, B, v, mo, bool) {
         if(A.touchable && B.touchesOthers) {
-            if(A.moves && A[mo]) {
+            if(A.moves) {
                 B.touching[i].push(A);
             } else {
                 B.touchingStatic[i] = true;
-                if(bool && B[mo] && B.moves) {
+                if(bool && B.moves) {
                     B[v] = 0;
                 }
             }
@@ -284,16 +284,18 @@ class Level {
         return value != 0 && (value < 0) == (i % 2 == 0);
     }
     getMinVelocities(starter, i, horizontal) {
+        console.log("getting min on " + i);
         if(starter.minVelocities[i] !== null) {
             return;
         }
         if(starter.touchingStatic[i]) {
+            console.log("setting min to 0");
             starter.minVelocities[i] = 0;
             return;
         }
         let minimum = Number.POSITIVE_INFINITY;
         for(const connection of starter.touching[i]) {
-            this.getMinVelocities(connection, i);
+            this.getMinVelocities(connection, i, horizontal);
             if(connection.minVelocities[i] < minimum) {
                 minimum = connection.minVelocities[i];
             }
@@ -306,46 +308,68 @@ class Level {
                 minimum = velocity * multiplier;
             }
         }
+        console.log("Setting min to " + minimum);
         starter.minVelocities[i] = minimum;
     }
-    chainMomentum(starter, i, horizontal, momentumInfo, totalMass, totalMomentum, starting) {
-        const multiplier = (i % 2 == 0) ? -1 : 1;
-        const adding = (horizontal ? starter.vx : starter.vy) * starter.m;
-        let theoreticalVelocity = multiplier * (totalMomentum + adding) / (totalMass + starter.m);
+    chainMomentum(starter, i, multiplier, v, relevantMarking, receives, momentumInfo, totalMass, totalMomentum) {
+        console.log("chaining on " + i);
+        
+        console.log(starter);
+        console.log("(v = " + starter[v] + ")");
+        const adding = starter[v] * starter.m * multiplier;
+        let theoreticalVelocity = (totalMomentum + adding) / (totalMass + starter.m);
         if(starter.minVelocities[i] < theoreticalVelocity) {
             theoreticalVelocity = starter.minVelocities[i];
         }
+        if(!starter[receives] && starter[v] * multiplier <= starter.minVelocities[i]) {
+            if(momentumInfo.override === undefined || starter[v] * multiplier < momentumInfo.override) {
+                momentumInfo.override = starter[v];
+            }
+        }
+        console.log("theoretical velocity = " + theoreticalVelocity);
         for(const connection of starter.touching[i]) {
-            let nextMoment = horizontal ? connection.vx : connection.vy;
-            nextMoment *= multiplier;
+            let nextMoment = connection[v] * multiplier;
             if(connection.minVelocities[i] < nextMoment) {
                 nextMoment = connection.minVelocities[i];
             }
-            if(!epsilonEquals(theoreticalVelocity, nextMoment) || theoreticalVelocity > nextMoment) {
-                this.chainMomentum(connection, i, horizontal, momentumInfo, totalMass + starter.m, totalMomentum + adding, false);
-            } else {
-
-            }
-        }
-    }
-    handleMomentum(starter, i, relevantMarking, relevantVelocity, horizontal, starters) {
-        if(starter[relevantMarking]) {
-            let momentumInfo = {
-                total: 0,
-                totalMass: 0,
-                connected: []
-            };
-            this.reportTemporaryStatic(starter, i); // load all static counters
-            this.chainMomentum(starter, momentumInfo, i, horizontal, 0, 0, starters);
-            const settingVelocity = starter.temporaryStaticCounter ? 0 : momentumInfo.total / momentumInfo.totalMass;
-            if(starter.temporaryStaticCounter || (momentumInfo.connected.length > 1 && (momentumInfo.total == 0 || (momentumInfo.total < 0) == (i % 2 == 0)))) {
-                for(const connected of momentumInfo.connected) {
-                    connected[relevantVelocity] = settingVelocity;
-                    connected[relevantMarking] = false;
-                    if(connected.temporaryStaticCounter) {
-                        delete connected.temporaryStaticCounter;
+            let checked = epsilonEquals(theoreticalVelocity, nextMoment) || theoreticalVelocity > nextMoment;
+            if(!checked) {
+                console.log("unable to connect");
+                if(connection[relevantMarking] && nextMoment > 0 && connection.touching[i].length > 0) {
+                    console.log("calling recursion");
+                    this.chainMomentum(connection, i, multiplier, v, relevantMarking, receives, {mass: 0, momentum: 0, connected: []}, 0, 0);
+                    const newVel = connection[v] * multiplier;
+                    if(newVel < connection.minVelocities[i]) {
+                        console.log("recalculating checked");
+                        checked = epsilonEquals(theoreticalVelocity, newVel) || theoreticalVelocity > newVel;
                     }
                 }
+            }
+            if(checked) {
+                console.log("successfully chained");
+                this.chainMomentum(connection, i, multiplier, v, relevantMarking, receives, momentumInfo, totalMass + starter.m, totalMomentum + adding);
+            }
+        }
+        momentumInfo.connected.push(starter);
+        momentumInfo.mass += starter.m;
+        momentumInfo.momentum += adding;
+        
+        if(totalMass == 0) { // if this was the starter
+            if(momentumInfo.connected.length > 1 && (momentumInfo.momentum == 0 || momentumInfo.momentum > 0)) {
+                console.log("successful collision");
+                console.log(momentumInfo);
+                let settingVelocity = momentumInfo.momentum/momentumInfo.mass;
+                if(momentumInfo.override !== undefined) {
+                    settingVelocity = momentumInfo.override;
+                }
+                settingVelocity *= multiplier; // convert back according to direction
+                for(const connected of momentumInfo.connected) {
+                    connected[v] = settingVelocity;
+                    connected[relevantMarking] = false;
+                }
+                // console.log(settingVelocity);
+                // console.log(this.blocks);
+                // console.log(momentumInfo);
             }
         }
     }
@@ -376,7 +400,7 @@ class Level {
                 block.minVelocities = [null, null, null, null];
             }
             if(block.moves) {
-                if(block.receivesMomentumX || block.receivesMomentumY) {
+                if(block.touchesOthers && block.touchable) {
                     block.markedX = true; // used as placeholder, will be set to true
                     block.markedY = true;
                 }
@@ -388,7 +412,7 @@ class Level {
                 } else {
                     ratio = maximumReasonableTranslation / (absY * dt);
                 }
-                block.translation = 0.01;
+                block.translation = dt;
                 if(ratio < 1) {
                     console.log("L + Ratio");
                     console.log(absX);
@@ -437,9 +461,6 @@ class Level {
             }
         }
         const starters = [[], [], [], []];
-        if(this.leavingTo !== null) {
-            this.player.markedX = true;
-        }
         for(const A of this.blocks) {
             if(A.moves && (A !== this.player || this.leavingTo === null)) {
                 A.vx += A.ax * dt;
@@ -479,21 +500,13 @@ class Level {
                             let skip = false;
                             if(A.touchable && B.touchable) {
                                 if(A.moves && A.touchesOthers && ((rightAbove && A.vy < 0) || (rightBelow && A.vy > 0)) && ((onTheRight && A.vx < 0) || (onTheLeft && A.vx > 0))) {
-                                    if(A.receivesMomentumX) {
                                         A.vx = 0;
-                                    }
-                                    if(A.receivesMomentumY) {
                                         A.vy = 0;
-                                    }
                                     skip = true;
                                 }
                                 if(B.moves && B.touchesOthers && ((rightAbove && B.vy > 0) || (rightBelow && B.vy < 0)) && ((onTheRight && B.vx > 0) || (onTheLeft && B.vx < 0))) {
-                                    if(B.receivesMomentumX) {
                                         B.vx = 0;
-                                    }
-                                    if(B.receivesMomentumY) {
                                         B.vy = true;
-                                    }
                                     skip = true;
                                 }
                             } 
@@ -546,10 +559,16 @@ class Level {
         }
         for(let i = 0; i < 4; i++) {
             const horizontal = i == 0 || i == 3;
+            const multiplier = (i % 2 == 0) ? -1 : 1;
             const relevantVelocity = horizontal ? "vx" : "vy";
             const relevantMarking = horizontal ? "markedX" : "markedY";
+            const receives = horizontal ? "receivesMomentumX" : "receivesMomentumY";
             for(let j = 0; j < starters[i].length; j++) {
-                this.handleMomentum(starters[i][j], i, relevantMarking, relevantVelocity, horizontal, starters);
+                this.getMinVelocities(starters[i][j], i, horizontal);
+                if(starters[i][j][relevantMarking]) {
+                    console.log("beginning a chain");
+                    this.chainMomentum(starters[i][j], i, multiplier, relevantVelocity, relevantMarking, receives, {mass: 0, momentum: 0, connected: []}, 0, 0);
+                }
             }
         }
         

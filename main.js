@@ -8,20 +8,27 @@ const game = document.getElementById("game");
 const fpsCounter = document.getElementById("FPS");
 
 const player = new Player();
-const slider = new MovingBlock(-15, 30, 10, 5, 5, false);
-slider.vx = 5;
+const slider = new MovingBlock(-15, 10, 10, 5, 5, false);
+slider.vx = 10;
 slider.receivesMomentumX = false;
 slider.receivesMomentumY = true;
-const first = new MovingBlock(-20, -10, 5, 5, 5, false);
-first.vx = 6;
+const slider2 = new MovingBlock(0, 10, 10, 5, 5, false);
+slider2.vx = 5;
+slider2.receivesMomentumX = false;
+slider2.receivesMomentumY = false;
 const startScreen = new Level([
-    first,
-    new MovingBlock(-15, -10, 5, 5, 5, false),
-    new MovingBlock(-10, -10, 5, 10, 5, false),
-    new MovingBlock(-5, -10, 5, 5, 5, false),
-    new MovingBlock(-5, -5, 5, 5, 5, false),
-    new MovingBlock(0, -10, 5, 5, 5, false),
-    new Wall(10, -5, 5, 5)
+    slider,
+    slider2,
+    // new MovingBlock(-15, 0, 10, 5, 5, false),
+    // new MovingBlock(-15, 5, 5, 5, 5, false),
+    // new MovingBlock(-15, 10, 5, 5, 5, false),
+    // new MovingBlock(-10, 5, 5, 5, 5, false),
+    // new MovingBlock(-15, 20, 5, 5, 5, false),
+    // new MovingBlock(-10, -10, 5, 10, 5, false),
+    // new MovingBlock(-5, -10, 5, 5, 5, false),
+    // new MovingBlock(-5, -5, 5, 5, 5, false),
+    // new MovingBlock(0, -10, 5, 5, 5, false),
+    // new Wall(10, -5, 5, 5)
 ], player);
 startScreen.setBoundaries(-30, 35, -10, 50);
 const second = new Level([new Wall(0, 0, 5, 5)], player);

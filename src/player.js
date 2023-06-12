@@ -1,6 +1,9 @@
 import MovingBlock from './movingBlock.js';
-const forceDueToKey = 200;
+const forceDueToKeyX = 200;
+const forceDueToKeyY = 400;
 const jumpLimit = 0.4;
+const flying = true;
+const killkey = 'f';
 class Player extends MovingBlock {
     constructor() {
         super(0, 0, 5, 5, 5, true, "player");
@@ -14,13 +17,18 @@ class Player extends MovingBlock {
         });
         this.keyFx = 0;
         this.keyFy = 0;
-        this.jumpCharge = 0;
+        this.jumpCharge = -1;
     }
     update(dt) {
+        if(this.keysDown[killkey]) {
+            throw "killed";
+        }
         let fx = 0;
         let fy = 0;
         if(this.keysDown["w"] && !this.touchingStatic[1]) {
-            if(this.touchingStatic[2] || this.touching[2].length > 0) {
+            if(flying) {
+                fy++;
+            } else if(this.touchingStatic[2] || this.touching[2].length > 0) {
                 this.jumpCharge = 0;
                 this.vy = 23;
                 this.ay = 0;
@@ -44,7 +52,8 @@ class Player extends MovingBlock {
         if(this.keysDown["d"]) {
             fx++;
         }
-        this.applyConstantForce(forceDueToKey * (fx - this.keyFx), forceDueToKey * (fy - this.keyFy));
+        //console.log(fy);
+        this.applyConstantForce(forceDueToKeyX * (fx - this.keyFx), forceDueToKeyY * (fy - this.keyFy));
         this.keyFx = fx;
         this.keyFy = fy;
     }
