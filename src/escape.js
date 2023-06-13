@@ -1,13 +1,10 @@
 export default class {
-    constructor(lowerBound, upperBound, to, spawnX, spawnY) {
+    constructor(side, lowerBound, upperBound, to, spawnX, spawnY) {
+        this.side = side;
         this.lowerBound = lowerBound;
         this.upperBound = upperBound;
         this.to = to;
         this.spawnX = spawnX;
         this.spawnY = spawnY;
-    }
-    takeFrom(from, game) {
-        from.unload(game);
-        this.to.load(game, this.spawnX, this.spawnY);
     }
 }

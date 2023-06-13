@@ -5,15 +5,14 @@ const maximumVelocity = 40;
 const escapeVelocity = 20;
 const cover = document.getElementById("cover");
 class Level {
-    constructor(blocks, player) {
-        this.player = player;
+    constructor(blocks) {
+        this.player = null;
         this.blocks = blocks;
         this.element = document.createElement("div");
         this.element.classList.add("level");
         for(const block of this.blocks) {
             block.initialize(this);
         }
-        this.blocks.push(player);
         this.x = {};
         this.y = {};
         
@@ -27,6 +26,12 @@ class Level {
         this.leavingTo = 1; // null = in middle of level, escape = leaving, 1 = entering
         this.fullyLeft = false;
     }
+    setPlayer(player) {
+        if(this.player === null) {
+            this.player = player;
+            this.blocks.push(player);
+        }
+    }
     static LEFT = 0;
     static RIGHT = 3;
     static UP = 1;
@@ -39,10 +44,11 @@ class Level {
         this.finishLoading();
     }
     connect(side, lowerBound, upperBound, otherLevel, otherLowerBound, otherUpperBound) {
-        this.addEscape(side, lowerBound, upperBound, otherLevel, otherUpperBound/2 + otherLowerBound/2 - 2.5);
-        otherLevel.addEscape(3 - side, otherLowerBound, otherUpperBound, this, upperBound/2 + lowerBound/2 - 2.5);
+        // UNDER CONSTRUCTION
+        // this.addEscape(side, lowerBound, upperBound, otherLevel, otherUpperBound/2 + otherLowerBound/2 - 2.5);
+        // otherLevel.addEscape(3 - side, otherLowerBound, otherUpperBound, this, upperBound/2 + lowerBound/2 - 2.5);
     }
-    addEscape(side, lowerBound, upperBound, otherLevel, spawnPos) {
+    addEscape(side, lowerBound, upperBound, otherLevel, spawnPos, _otherSettingValue) {
         const visual = document.createElement("div");
         const behindVisual = document.createElement("div");
         visual.classList.add("escape");
@@ -54,7 +60,7 @@ class Level {
         const dir = horizontal ? 'x' : 'y';
         const positive = side % 2 != 0;
         let settingValue = this[dir][positive ? 'max' : 'min'];
-        let otherSettingValue = otherLevel[dir][positive ? 'min' : 'max'] - 10;
+        let otherSettingValue = _otherSettingValue - 10;
         if(side % 2 == 0) {
             settingValue -= 5;
             otherSettingValue += 15;
@@ -65,13 +71,13 @@ class Level {
             this.updatePose(settingValue, lowerBound, behindVisual);
             visual.style.height = `${upperBound - lowerBound}vw`;
             behindVisual.style.height = `${upperBound - lowerBound}vw`;
-            this.escapes[side].push(new Escape(lowerBound, upperBound, otherLevel, otherSettingValue, spawnPos));
+            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, otherSettingValue, spawnPos));
         } else {
             this.updatePose(lowerBound, settingValue, visual);
             this.updatePose(lowerBound, settingValue, behindVisual);
             visual.style.width = `${upperBound - lowerBound}vw`;
             behindVisual.style.width = `${upperBound - lowerBound}vw`;
-            this.escapes[side].push(new Escape(lowerBound, upperBound, otherLevel, spawnPos, otherSettingValue));
+            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, spawnPos, otherSettingValue));
         }
     }
     load(game, x = 0, y = 0, firstLevel = false) {
@@ -350,7 +356,6 @@ class Level {
                 for(const escape of this.escapes[side]) {
                     if(A[otherD].position >= escape.lowerBound && A[otherD].position + A[otherD].size <= escape.upperBound) {
                         this.escapingSide = side;
-                        escape.to.escapingSide = side;
                         this.leavingTo = escape;
                         A[d].velocity = _escape;
                         A[otherD].velocity = 0;
