@@ -280,7 +280,7 @@ class Level {
         const adding = starter[dir].velocity * starter.m * multiplier;
         const theoreticalVelocity = (totalMomentum + adding) / (totalMass + starter.m);
         for(const connection of starter.touching[i]) {
-            if(epsilonEquals(theoreticalVelocity, connection[dir].velocity) || theoreticalVelocity > connection[dir].velocity * multiplier) {
+            if(epsilonEquals(theoreticalVelocity, connection[dir].velocity * multiplier) || theoreticalVelocity > connection[dir].velocity * multiplier) {
                 this.getMinVelocities(connection, i, dir, multiplier, momentumInfo, totalMass + starter.m, totalMomentum + adding);
                 if(connection.minVelocity !== null) {
                     if(minimum === null || connection.minVelocity < minimum) {

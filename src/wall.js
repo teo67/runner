@@ -1,7 +1,7 @@
 import Block from './block.js';
 class Wall extends Block {
-    constructor(x, y, w, h) {
-        super(x, y, w, h);
+    constructor(x, y, w, h, classname = 'block') {
+        super(x, y, w, h, classname);
     }
 }
 Wall.prototype.moves = false;
