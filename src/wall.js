@@ -5,6 +5,7 @@ class Wall extends Block {
     }
 }
 Wall.prototype.moves = false;
+Wall.prototype.expands = false;
 Wall.prototype.xreceivesMomentum = false;
 Wall.prototype.yreceivesMomentum = false;
 Wall.prototype.touchesOthers = false;

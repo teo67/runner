@@ -40,4 +40,5 @@ MovingBlock.prototype.yreceivesMomentum = true;
 MovingBlock.prototype.touchesOthers = true;
 MovingBlock.prototype.touchable = true;
 MovingBlock.prototype.updates = false;
+MovingBlock.prototype.expands = false;
 export default MovingBlock;

@@ -41,10 +41,6 @@ div.movingblock {
 }
 div.button {
     position: absolute;
-    background-color: transparent;
-}
-div.button-skin {
-    position: absolute;
     background-color: yellow;
 }
 div.player {
