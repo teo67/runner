@@ -279,6 +279,7 @@ class Level {
         A.y.position += translation * A.y.velocity;
         this.updatePose(A.x.position, A.y.position, A.element);
         if(A.expands) {
+            console.log('changing size by ' + A.y.expansionSpeed * translation)
             A.x.size += translation * A.x.expansionSpeed;
             A.y.size += translation * A.y.expansionSpeed;
             if(A.x.size < 0) {
@@ -294,7 +295,6 @@ class Level {
     updateTouching(A, i, B, dir, bool) {
         if(A.touchable && B.touchesOthers) {
             if(A.moves) {
-                console.log('touching!')
                 B.touching[i].push(A);
             } else {
                 B.touchingStatic[i] = true;
@@ -312,20 +312,17 @@ class Level {
         return value != 0 && (value < 0) == (i % 2 == 0);
     }
     getMinVelocities(starter, i, dir, multiplier, momentumInfo, totalMass, totalMomentum) {
+        console.log('getting');
         if(starter.touchingStatic[i]) {
             starter.minVelocity = 0;
             return;
         }
         let minimum = null;
         let ignored = [];
-        const adding = this.getEffectiveVelocity(starter, dir, i % 2 == 0) * starter.m * multiplier;
+        const adding = starter[dir].velocity * starter.m * multiplier;
         let theoreticalVelocity = (totalMomentum + adding) / (totalMass + starter.m);
         for(const connection of starter.touching[i]) {
-            let effectiveV = connection[dir].velocity
-            if(connection.expands && i % 2 == 0) {
-                effectiveV += connection[dir].expansionSpeed
-            }
-            effectiveV *= multiplier
+            let effectiveV = connection[dir].velocity * multiplier
             if(epsilonEquals(theoreticalVelocity, effectiveV) || theoreticalVelocity > effectiveV) {
                 this.getMinVelocities(connection, i, dir, multiplier, momentumInfo, totalMass + starter.m, totalMomentum + adding);
                 if(connection.minVelocity !== null) {
@@ -356,19 +353,21 @@ class Level {
         if(totalMass == 0) {
             if(starter.minVelocity === null) { // standard collision
                 if(momentumInfo.connected.length > 1 && momentumInfo.momentum >= 0) {
+                    console.log('completing basic collision');
+                    console.log(momentumInfo.connected[0].x.velocity)
                     const settingVelocity = momentumInfo.momentum/momentumInfo.mass * multiplier;
                     for(const connected of momentumInfo.connected) {
                         connected[dir].marked = false;
                         connected.minVelocity = null;
-                        if(connected === starter && starter.expands && starter[dir].velocity * multiplier <= 0) {
-                            continue;
-                        }
                         connected[dir].velocity = settingVelocity;
                     }
-                    console.log('finished short collision');
-                    console.log(momentumInfo)
                 }
                 for(const ignore of ignored) {
+                    if(ignore[dir].marked) {
+                        if(ignore[dir].velocity * multiplier > 0 && ignore.touching[i].length > 0) {
+                            this.getMinVelocities(connection, i, dir, multiplier, {mass: 0, momentum: 0, connected: []}, 0, 0);
+                        }
+                    }
                     this.getMinVelocities(ignore, i, dir, multiplier, {mass: 0, momentum: 0, connected: []}, 0, 0);
                 }
             } else {
@@ -377,21 +376,17 @@ class Level {
         }
     }
     chainMomentum(starter, i, dir, multiplier, momentumInfo, totalMass, totalMomentum) {
-        const adding = this.getEffectiveVelocity(starter, dir, i % 2 == 0) * starter.m * multiplier;
+        const adding = starter[dir].velocity * starter.m * multiplier;
         let theoreticalVelocity = starter.minVelocity === null ? (totalMomentum + adding) / (totalMass + starter.m) : starter.minVelocity;
         for(const connection of starter.touching[i]) {
             let nextVelocity = connection.minVelocity;
             if(nextVelocity === null) {
-                nextVelocity = connection[dir].velocity;
-                if(connection.expands && i % 2 == 0) {
-                    nextVelocity += connection[dir].expansionSpeed;
-                }
-                nextVelocity *= multiplier;
+                nextVelocity = connection[dir].velocity * multiplier;
             }
             if(epsilonEquals(theoreticalVelocity, nextVelocity) || theoreticalVelocity > nextVelocity) {
                 this.chainMomentum(connection, i, dir, multiplier, momentumInfo, totalMass + starter.m, totalMomentum + adding);
             } else {
-                if(connection[dir].marked && (nextVelocity > 0 || (connection.expands && connection[dir].expansionSpeed > 0)) && connection.touching[i].length > 0) {
+                if(connection[dir].marked && nextVelocity > 0 && connection.touching[i].length > 0) {
                     this.getMinVelocities(connection, i, dir, multiplier, {mass: 0, momentum: 0, connected: []}, 0, 0);
                 }
             }
@@ -406,12 +401,10 @@ class Level {
                 settingVelocity = starter.minVelocity;
             }
             if(momentumInfo.connected.length > 1 && settingVelocity >= 0) {
-                console.log(starter.minVelocity)
+                console.log('complete min collision')
+                console.log(settingVelocity * multiplier)
                 for(const connected of momentumInfo.connected) {
                     connected[dir].marked = false;
-                    if(connected === starter && starter.expands && starter[dir].velocity * multiplier <= 0 && starter.minVelocity === null) {
-                        continue;
-                    }
                     if(connected.minVelocity !== null && (starter.minVelocity === null || connected.minVelocity < starter.minVelocity)) {
                         connected[dir].velocity = connected.minVelocity * multiplier;
                     } else {
@@ -419,8 +412,6 @@ class Level {
                     }
                     connected.minVelocity = null;
                 }
-                console.log('finished long collision');
-                console.log(momentumInfo)
                 
             }
         }
@@ -630,10 +621,10 @@ class Level {
                 if(A.touchesOthers && A.moves) {
                     for(let i = 0; i < 4; i++) {
                         const dir = (i == 0 || i == 3) ? 'x' : 'y';
-                        if(A.touching[i].length > 0 && (this.isMatching(A[dir].velocity, i) || (A.expands && A[dir].expansionSpeed > 0))) {
+                        if(A.touching[i].length > 0 && this.isMatching(A[dir].velocity, i)) {
                             let broken = false;
                             for(const otherTouching of A.touching[3 - i]) {
-                                if(this.isMatching(otherTouching[dir].velocity, i) || (otherTouching.expands && otherTouching[dir].expansionSpeed > 0)) {
+                                if(this.isMatching(otherTouching[dir].velocity, i)) {
                                     broken = true;
                                     break;
                                 }
@@ -651,7 +642,6 @@ class Level {
                 block.update(dt);
             }
         }
-        console.log(starters)
         for(let i = 0; i < 4; i++) {
             const dir = (i == 0 || i == 3) ? 'x' : 'y';
             const multiplier = (i % 2 == 0) ? -1 : 1;
