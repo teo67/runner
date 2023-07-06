@@ -1,5 +1,66 @@
 todo:
 
+expanding considerations should be done in getMinVelocities (I think????)
+besides actually adding bonuses and bonusmomentum at the end
+
+add bonus considerations to chainMomentum only in the negative direction and do it for both objects
+don't recalculate bonuses in chainMomentum, but whenever a bonus is reached, be sure to account for it with bonusmomentum
+add bonuses and bonusmomentum at the end of chainMomentum
+
+question: call chainMomentum if going backwards and starter bonus != 0 ? could be necessary in order to implement correctly, ex.
+
+(e->3)
+        (3.5<-starter, bonus = 2)
+(1<-b)
+
+to make sure the lower block doesn't end up in the collision? or is this paradoxical/unnecessary
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 level transition animation
 two-way level transition structure
 selective options for blocks structure (collides, affected by other blocks, touching type, etc)

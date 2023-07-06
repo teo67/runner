@@ -279,14 +279,15 @@ class Level {
         A.y.position += translation * A.y.velocity;
         this.updatePose(A.x.position, A.y.position, A.element);
         if(A.expands) {
-            console.log('changing size by ' + A.y.expansionSpeed * translation)
             A.x.size += translation * A.x.expansionSpeed;
             A.y.size += translation * A.y.expansionSpeed;
-            if(A.x.size < 0) {
+            if(A.x.size <= 0) {
                 A.x.size = 0;
+                A.x.expansionSpeed = 0;
             }
-            if(A.y.size < 0) {
+            if(A.y.size <= 0) {
                 A.y.size = 0;
+                A.y.expansionSpeed = 0;
             }
             A.updateScale()
         }
@@ -299,10 +300,13 @@ class Level {
             } else {
                 B.touchingStatic[i] = true;
                 if(bool && B.moves) {
-                    if(B.expands && i % 2 == 1) {
-                        B[dir].velocity = -B[dir].expansionSpeed;
+                    if(A.expands && side % 2 == 1 && A[dir].expansionSpeed < 0) {
+                        A[dir].velocity = -A[dir].expansionSpeed;
                     } else {
-                        B[dir].velocity = 0;
+                        A[dir].velocity = 0;
+                        if(A.expands && A[dir].expansionSpeed > 0) {
+                            A[dir].expansionSpeed = 0;
+                        }
                     }
                 }
             }
@@ -311,108 +315,176 @@ class Level {
     isMatching(value, i) {
         return value != 0 && (value < 0) == (i % 2 == 0);
     }
+    getBonus(starter, dir) {
+        let prevBonus = starter.bonus;
+        if(starter.expands) {
+            return prevBonus + starter[dir].expansionSpeed;
+        }
+        return prevBonus;
+    }
     getMinVelocities(starter, i, dir, multiplier, momentumInfo, totalMass, totalMomentum) {
-        console.log('getting');
+        let minimumV = null;
+        if(totalMass == 0) {
+            starter.bonus = 0;
+        }
+        if(starter.expands) {
+            starter.nextExpansionSpeed = starter[dir].expansionSpeed;
+        }
         if(starter.touchingStatic[i]) {
             starter.minVelocity = 0;
-            return;
-        }
-        let minimum = null;
-        let ignored = [];
-        const adding = starter[dir].velocity * starter.m * multiplier;
-        let theoreticalVelocity = (totalMomentum + adding) / (totalMass + starter.m);
-        for(const connection of starter.touching[i]) {
-            let effectiveV = connection[dir].velocity * multiplier
-            if(epsilonEquals(theoreticalVelocity, effectiveV) || theoreticalVelocity > effectiveV) {
-                this.getMinVelocities(connection, i, dir, multiplier, momentumInfo, totalMass + starter.m, totalMomentum + adding);
-                if(connection.minVelocity !== null) {
-                    let minV = connection.minVelocity;
-                    if(connection.expands && i % 2 == 0) {
-                        minV -= connection[dir].expansionSpeed;
-                    }
-                    if(minimum === null || minV < minimum) {
-                        minimum = minV;
-                    }
+            minimumV = 0;
+        } else {
+            let maxBonus = 0;
+            const adding = starter[dir].velocity * starter.m * multiplier;
+            let theoreticalVelocity = (totalMomentum + adding) / (totalMass + starter.m);
+            if(i % 2 == 1 && starter.expands) {
+                theoreticalVelocity += starter[dir].expansionSpeed * multiplier;
+            }
+            for(const connection of starter.touching[i]) {
+                let effectiveV = connection[dir].velocity;
+                if(i % 2 == 0 && connection.expands) {
+                    effectiveV += connection[dir].expansionSpeed;
                 }
-            } else if(totalMass == 0) {
-                ignored.push(connection);
+                effectiveV *= multiplier;
+                if(epsilonEquals(theoreticalVelocity, effectiveV) || theoreticalVelocity > effectiveV) {
+                    connection.bonus = 0;
+                    if(i % 2 == 1) {
+                        let prevBonus = this.getBonus(starter, dir);
+                        connection.bonus = prevBonus;
+                        momentumInfo.bonusMomentum -= prevBonus * connection.m;
+                    }
+                    this.getMinVelocities(connection, i, dir, multiplier, momentumInfo, totalMass + starter.m, totalMomentum + adding);
+                    if(connection.minVelocity !== null) {
+                        let minV = connection.minVelocity;
+                        if(connection.expands && i % 2 == 0) {
+                            minV -= connection.nextExpansionSpeed;
+                        }
+                        if(minimumV === null || minV < minimumV) {
+                            minimumV = minV;
+                        }
+                    }
+                    if(i % 2 == 0) {
+                        let prevBonus = this.getBonus(connection, dir);
+                        if(prevBonus > maxBonus) {
+                            maxBonus = prevBonus;
+                        }
+                    }
+                } else {
+                    momentumInfo.ignored.push(connection);
+                }
             }
+            if(i % 2 == 0) {
+                starter.bonus = maxBonus;
+                momentumInfo.bonusMomentum += maxBonus * starter.m;
+            }
+            momentumInfo.connected.push(starter);
+            momentumInfo.mass += starter.m;
+            momentumInfo.momentum += adding;
+            
+            starter.minVelocity = minimumV;
         }
-        momentumInfo.connected.push(starter);
-        momentumInfo.mass += starter.m;
-        momentumInfo.momentum += adding;
+        
+        if(minimumV !== null && starter.expands) {
+            const tempMin = Math.max(0, minimumV - starter[dir].expansionSpeed);
+            if(i % 2 == 1) {
+                starter.minVelocity = tempMin;
+            }
+            starter.nextExpansionSpeed = minimumV - tempMin;
+        }
         if(!starter[dir + 'receivesMomentum']) {
-            if(minimum === null || starter[dir].velocity * multiplier < minimum) {
-                minimum = starter[dir].velocity * multiplier;
+            if(minimumV === null || starter[dir].velocity * multiplier < minimumV) {
+                starter.minVelocity = starter[dir].velocity * multiplier;
             }
         }
-        if(minimum != null && starter.expands && i % 2 == 1) {
-            minimum -= starter[dir].expansionSpeed;
-        }
-        starter.minVelocity = minimum;
         if(totalMass == 0) {
             if(starter.minVelocity === null) { // standard collision
-                if(momentumInfo.connected.length > 1 && momentumInfo.momentum >= 0) {
-                    console.log('completing basic collision');
-                    console.log(momentumInfo.connected[0].x.velocity)
+                momentumInfo.momentum += momentumInfo.bonusMomentum;
+                let firstV = momentumInfo.momentum/momentumInfo.mass + starter.bonus * multiplier;
+                if(starter.expands && i % 2 == 1) {
+                    firstV += starter[dir].expansionSpeed;
+                }
+                if(momentumInfo.connected.length > 1 && firstV >= 0) {
                     const settingVelocity = momentumInfo.momentum/momentumInfo.mass * multiplier;
                     for(const connected of momentumInfo.connected) {
                         connected[dir].marked = false;
                         connected.minVelocity = null;
                         connected[dir].velocity = settingVelocity;
-                    }
-                }
-                for(const ignore of ignored) {
-                    if(ignore[dir].marked) {
-                        if(ignore[dir].velocity * multiplier > 0 && ignore.touching[i].length > 0) {
-                            this.getMinVelocities(connection, i, dir, multiplier, {mass: 0, momentum: 0, connected: []}, 0, 0);
+                        if(connected.bonus != 0) {
+                            connected[dir].velocity += connected.bonus;
                         }
                     }
-                    this.getMinVelocities(ignore, i, dir, multiplier, {mass: 0, momentum: 0, connected: []}, 0, 0);
+                }
+                for(const ignore of momentumInfo.ignored) {
+                    if(ignore[dir].marked) {
+                        if(ignore[dir].velocity * multiplier > 0 && ignore.touching[i].length > 0) {
+                            this.getMinVelocities(ignore, i, dir, multiplier, {mass: 0, momentum: 0, connected: [], bonusMomentum: 0, ignored: []}, 0, 0);
+                        }
+                    }
                 }
             } else {
-                this.chainMomentum(starter, i, dir, multiplier, {mass: 0, momentum: 0, connected: []}, 0, 0);
+                this.chainMomentum(starter, i, dir, multiplier, {mass: 0, momentum: 0, connected: [], bonusMomentum: 0, ignored: []}, 0, 0);
             }
         }
     }
+
     chainMomentum(starter, i, dir, multiplier, momentumInfo, totalMass, totalMomentum) {
         const adding = starter[dir].velocity * starter.m * multiplier;
-        let theoreticalVelocity = starter.minVelocity === null ? (totalMomentum + adding) / (totalMass + starter.m) : starter.minVelocity;
+        let theoreticalVelocity = starter.minVelocity;
+        if(theoreticalVelocity === null) {
+            theoreticalVelocity = (totalMomentum + adding) / (totalMass + starter.m);
+            momentumInfo.bonusMomentum -= starter.bonus * starter.m * multiplier;
+            theoreticalVelocity += starter.bonus * multiplier;
+        }
+        if(i % 2 == 1 && starter.expands) {
+            theoreticalVelocity += starter.nextExpansionSpeed;
+        }
         for(const connection of starter.touching[i]) {
             let nextVelocity = connection.minVelocity;
             if(nextVelocity === null) {
-                nextVelocity = connection[dir].velocity * multiplier;
+                nextVelocity = (connection[dir].velocity + connection.bonus) * multiplier;
+            }
+            if(i % 2 == 0 && connection.expands) {
+                nextVelocity -= connection.nextExpansionSpeed;
             }
             if(epsilonEquals(theoreticalVelocity, nextVelocity) || theoreticalVelocity > nextVelocity) {
                 this.chainMomentum(connection, i, dir, multiplier, momentumInfo, totalMass + starter.m, totalMomentum + adding);
-            } else {
-                if(connection[dir].marked && nextVelocity > 0 && connection.touching[i].length > 0) {
-                    this.getMinVelocities(connection, i, dir, multiplier, {mass: 0, momentum: 0, connected: []}, 0, 0);
-                }
+            } else if(connection[dir].marked && connection[dir].velocity * multiplier > 0 && connection.touching[i].length > 0) {
+                momentumInfo.ignored.push(connection);
             }
         }
         momentumInfo.connected.push(starter);
         momentumInfo.mass += starter.m;
         momentumInfo.momentum += adding;
-        
         if(totalMass == 0) { // if this was the starter
-            let settingVelocity = momentumInfo.momentum/momentumInfo.mass;
-            if(starter.minVelocity !== null) {
-                settingVelocity = starter.minVelocity;
+            momentumInfo.momentum += momentumInfo.bonusMomentum;
+            let settingVelocity = starter.minVelocity;
+            if(settingVelocity === null) {
+                settingVelocity = momentumInfo.momentum/momentumInfo.mass;
+                settingVelocity += starter.bonus * multiplier;
             }
+            if(starter.expands && i % 2 == 1) {
+                settingVelocity += starter.nextExpansionSpeed;
+            } 
             if(momentumInfo.connected.length > 1 && settingVelocity >= 0) {
-                console.log('complete min collision')
-                console.log(settingVelocity * multiplier)
                 for(const connected of momentumInfo.connected) {
                     connected[dir].marked = false;
-                    if(connected.minVelocity !== null && (starter.minVelocity === null || connected.minVelocity < starter.minVelocity)) {
-                        connected[dir].velocity = connected.minVelocity * multiplier;
+                    let min = starter.minVelocity;
+                    if(connected.minVelocity !== null) {
+                        min = connected.minVelocity;
+                    }
+                    if(min === null) {
+                        connected[dir].velocity = momentumInfo.momentum/momentumInfo.mass * multiplier + connected.bonus;
                     } else {
-                        connected[dir].velocity = settingVelocity * multiplier;
+                        connected[dir].velocity = min * multiplier;
+                    }
+                    if(connected.expands) {
+                        connected[dir].expansionSpeed = connected.nextExpansionSpeed;
                     }
                     connected.minVelocity = null;
                 }
-                
+            }
+            for(const ignore of momentumInfo.ignored) {
+                this.getMinVelocities(ignore, i, dir, multiplier, {mass: 0, momentum: 0, connected: [], bonusMomentum: 0, ignored: []}, 0, 0);
             }
         }
     }
@@ -431,7 +503,14 @@ class Level {
                     }
                 }
             }
-            A[d].velocity = 0;
+            if(A.expands && side % 2 == 1 && A[d].expansionSpeed < 0) {
+                A[d].velocity = -A[d].expansionSpeed;
+            } else {
+                A[d].velocity = 0;
+                if(A.expands && A[d].expansionSpeed > 0) {
+                    A[d].expansionSpeed = 0;
+                }
+            }
         }
     }
     accelerate(A, dir, dt) {
@@ -451,6 +530,8 @@ class Level {
                 if(block.touchesOthers && block.touchable) {
                     block.x.marked = true; // used as placeholder, will be set to true
                     block.y.marked = true;
+                    block.x.bonus = 0;
+                    block.y.bonus = 0;
                 }
                 let ratio = 1;
                 let absX = block.x.velocity;
@@ -527,12 +608,12 @@ class Level {
                 if(epsilonEquals(A.y.position, this.y.min)) {
                     this.onEdge(A, 2, 'y', 'x', -escapeVelocity, A.y.velocity < 0);
                 } else if(epsilonEquals(A.y.position + A.y.size, this.y.max)) {
-                    this.onEdge(A, 1, 'y', 'x', escapeVelocity, A.y.velocity > 0);
+                    this.onEdge(A, 1, 'y', 'x', escapeVelocity, this.getEffectiveVelocity(A, 'y', false) > 0);
                 }
                 if(epsilonEquals(A.x.position, this.x.min)) {
                     this.onEdge(A, 0, 'x', 'y', -escapeVelocity, A.x.velocity < 0);
                 } else if(epsilonEquals(A.x.position + A.x.size, this.x.max)) {
-                    this.onEdge(A, 3, 'x', 'y', escapeVelocity, A.x.velocity > 0);
+                    this.onEdge(A, 3, 'x', 'y', escapeVelocity, this.getEffectiveVelocity(A, 'x', false) > 0);
                 }
             }
         }
@@ -599,19 +680,19 @@ class Level {
                             if(!skip) {
                                 if(this.getTranslationDistance(A, B, 0, 'x') === true) {
                                     if(rightAbove) {
-                                        this.updateTouching(A, 1, B, 'y', B.y.velocity > 0);
+                                        this.updateTouching(A, 1, B, 'y', this.getEffectiveVelocity(B, 'y', false) > 0);
                                         this.updateTouching(B, 2, A, 'y', A.y.velocity < 0);
                                     } else if(rightBelow) {
                                         this.updateTouching(A, 2, B, 'y', B.y.velocity < 0);
-                                        this.updateTouching(B, 1, A, 'y', A.y.velocity > 0);
+                                        this.updateTouching(B, 1, A, 'y', this.getEffectiveVelocity(A, 'y', false) > 0);
                                     }
                                 } else if(this.getTranslationDistance(A, B, 0, 'y') === true) {
                                     if(onTheRight) {
-                                        this.updateTouching(A, 3, B, 'x', B.x.velocity > 0);
+                                        this.updateTouching(A, 3, B, 'x', this.getEffectiveVelocity(B, 'x', false) > 0);
                                         this.updateTouching(B, 0, A, 'x', A.x.velocity < 0);
                                     } else if(onTheLeft) {
                                         this.updateTouching(A, 0, B, 'x', B.x.velocity < 0);
-                                        this.updateTouching(B, 3, A, 'x', A.x.velocity > 0);
+                                        this.updateTouching(B, 3, A, 'x', this.getEffectiveVelocity(A, 'x', false) > 0);
                                     }
                                 }
                             }
@@ -621,10 +702,10 @@ class Level {
                 if(A.touchesOthers && A.moves) {
                     for(let i = 0; i < 4; i++) {
                         const dir = (i == 0 || i == 3) ? 'x' : 'y';
-                        if(A.touching[i].length > 0 && this.isMatching(A[dir].velocity, i)) {
+                        if(A.touching[i].length > 0 && this.isMatching(this.getEffectiveVelocity(A, dir, i % 2 == 0), i)) {
                             let broken = false;
                             for(const otherTouching of A.touching[3 - i]) {
-                                if(this.isMatching(otherTouching[dir].velocity, i)) {
+                                if(this.isMatching(this.getEffectiveVelocity(otherTouching, dir, i % 2 == 0), i)) {
                                     broken = true;
                                     break;
                                 }
@@ -647,10 +728,11 @@ class Level {
             const multiplier = (i % 2 == 0) ? -1 : 1;
             for(let j = 0; j < starters[i].length; j++) {
                 if(starters[i][j][dir].marked) {
-                    this.getMinVelocities(starters[i][j], i, dir, multiplier, {connected: [], mass: 0, momentum: 0}, 0, 0);
+                    this.getMinVelocities(starters[i][j], i, dir, multiplier, {connected: [], mass: 0, momentum: 0, bonusMomentum: 0, ignored: []}, 0, 0);
                 }
             }
         }
+        
         for(const checker of aboveRightCheckers) {
             if(checker.y.velocity < 0 && checker.x.velocity < 0) {
                 checker.y.velocity = 0;

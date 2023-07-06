@@ -16,6 +16,8 @@ class MovingBlock extends Block {
         this.translation = 0;
         this.x.marked = false;
         this.y.marked = false;
+        this.bonus = 0;
+        this.bonus = 0;
         if(gravity) {
             this.applyConstantForce(-45 * this.m, 'y');
         }
