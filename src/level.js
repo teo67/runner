@@ -20,11 +20,18 @@ class Level {
         this.y.min = 0;
         this.x.max = 0;
         this.y.max = 0;
+        this.x.offset = 0;
+        this.y.offset = 0;
         this.alreadyLoaded = false;
         this.escapes = [[], [], [], []];
         this.escapingSide = 0;
         this.leavingTo = 1; // null = in middle of level, escape = leaving, 1 = entering
         this.fullyLeft = false;
+    }
+    addBlock(block) {
+        this.blocks.push(block);
+        block.initialize(this);
+        this.updatePose(block.x.position, block.y.position, block.element);
     }
     setPlayer(player) {
         if(this.player === null) {
@@ -36,12 +43,12 @@ class Level {
     static RIGHT = 3;
     static UP = 1;
     static DOWN = 2;
-    setBoundaries(minX, maxX, minY, maxY) {
+    setBoundaries(minX, maxX, minY, maxY, boundaries = true) {
         this.x.min = minX;
         this.x.max = maxX;
         this.y.min = minY;
         this.y.max = maxY;
-        this.finishLoading();
+        this.finishLoading(boundaries);
     }
     connect(side, lowerBound, upperBound, otherLevel, otherLowerBound, otherUpperBound) {
         // UNDER CONSTRUCTION
@@ -80,15 +87,15 @@ class Level {
             this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, spawnPos, otherSettingValue));
         }
     }
-    load(game, x = 0, y = 0, firstLevel = false) {
+    load(game, x = 0, y = 0, firstLevel = false, boundaries = true) {
         this.fullyLeft = false;
         this.leavingTo = firstLevel ? null : 1;
         this.player.initialize(this);
         if(!this.alreadyLoaded) {
             this.x.min = x;
             this.y.min = y;
-            this.x.max = x + this.player.w;
-            this.y.max = y + this.player.h;
+            this.x.max = x + this.player.x.size;
+            this.y.max = y + this.player.y.size;
         }
         for(let i = 0; i < this.blocks.length; i++) {
             if(this.blocks[i].deleting) {
@@ -114,7 +121,7 @@ class Level {
             }
         }
         if(!this.alreadyLoaded) {
-            this.finishLoading();
+            this.finishLoading(boundaries);
         }
         this.player.x.position = x;
         this.player.y.position = y;
@@ -124,13 +131,15 @@ class Level {
         }
         game.appendChild(this.element);
     }
-    finishLoading() {
+    finishLoading(boundaries = true) {
         this.element.style.width = `${this.x.max - this.x.min}vw`;
         this.element.style.height = `${this.y.max - this.y.min}vw`;
-        this.createBoundary(-15, -15, 10, this.y.max - this.y.min + 30);
-        this.createBoundary(this.x.max - this.x.min + 5, -15, 10, this.y.max - this.y.min + 30);
-        this.createBoundary(-10, -15, this.x.max - this.x.min + 20, 10);
-        this.createBoundary(-10, this.y.max - this.y.min + 5, this.x.max - this.x.min + 20, 10);
+        if(boundaries) {
+            this.createBoundary(-15, -15, 10, this.y.max - this.y.min + 30);
+            this.createBoundary(this.x.max - this.x.min + 5, -15, 10, this.y.max - this.y.min + 30);
+            this.createBoundary(-10, -15, this.x.max - this.x.min + 20, 10);
+            this.createBoundary(-10, this.y.max - this.y.min + 5, this.x.max - this.x.min + 20, 10);
+        }
         this.alreadyLoaded = true;
     }
     createBoundary(x, y, w, h) {
@@ -142,28 +151,36 @@ class Level {
         bound.style.width = `${w}vw`;
         this.element.appendChild(bound);
     }
-    update(dt) {
-        this.updateCollisions(dt);
-        this.updateView();
+    update(dt, building = false) {
+        if(building) {
+            this.ratioAndReset(this.player, dt);
+            this.preliminaryCollisionAdjustment(this.player);
+            this.doMinMaxAccel(this.player, dt, false);
+            this.player.update(dt);
+        } else {
+            this.updateCollisions(dt);
+        }
+        this.updateView(!building);
     }
     updatePose(x, y, element) {
         element.style.left = `${x - this.x.min}vw`;
         element.style.bottom = `${y - this.y.min}vw`;
     }
-    updateViewForDirection(direction, ratio, propName, str) {
+    updateViewForDirection(direction, ratio, propName, crop = true) {
         const mid = this.player[direction].position + this.player[direction].size/2;
-        this.element.style[propName] = `${this[direction].min - mid + 50 * ratio}vw`;
-        if(this[direction].max - this[direction].min >= 95 * ratio) {
-            if(this[direction].min >= mid - 45 * ratio) {
-                this.element.style[propName] = str;
-            } else if(this[direction].max <= mid + 45 * ratio) {
-                this.element.style[propName] = `${95 * ratio - this[direction].max + this[direction].min}vw`;
+        this[direction].offset = this[direction].min - mid + 50 * ratio;
+        if(crop && this[direction].max - this[direction].min >= 95 * ratio) {
+            if(this[direction].min >= mid - 50 * ratio + 5) {
+                this[direction].offset = 5;
+            } else if(this[direction].max <= mid + 50 * ratio - 5) {
+                this[direction].offset = 100 * ratio - 5 - this[direction].max + this[direction].min;
             }
         }
+        this.element.style[propName] = `${this[direction].offset}vw`;
     }
-    updateView() {
-        this.updateViewForDirection('x', 1, 'left', '5vw');
-        this.updateViewForDirection('y', document.documentElement.clientHeight/document.documentElement.clientWidth, 'bottom', '5vh');
+    updateView(crop = true) {
+        this.updateViewForDirection('x', 1, 'left', crop);
+        this.updateViewForDirection('y', document.documentElement.clientHeight/document.documentElement.clientWidth, 'bottom', crop);
     }
     getTranslationDistance(A, B, Bx, direction) { // false for never collides, true for already colliding, number for distance
         const pos = A[direction].position;
@@ -243,21 +260,23 @@ class Level {
     }
     preliminaryCollisionAdjustment(A) {
         let translation = A.translation;
-        for(let j = 0; j < this.blocks.length; j++) {
-            const B = this.blocks[j];
-            if(A !== B) {
-                let collisionPoint = this.getCollisionPoint(A, B, false);
-                if(B.moves && B.translation != 0 && (B.x.velocity != 0 || B.y.velocity != 0 || (B.expands && (B.x.expansionSpeed != 0 || B.y.expansionSpeed != 0)))) {
-                    const minCollisionPoint = this.getCollisionPoint(A, B, true, B.x.velocity * B.translation, B.y.velocity * B.translation);
-                    if(collisionPoint !== false && (minCollisionPoint === false || minCollisionPoint > collisionPoint)) {
-                        this.preliminaryCollisionAdjustment(B);
-                        collisionPoint = this.getCollisionPoint(A, B, false);
-                    } else {
-                        collisionPoint = minCollisionPoint;
+        if(A.touchable) {
+            for(let j = 0; j < this.blocks.length; j++) {
+                const B = this.blocks[j];
+                if(A !== B && B.touchable) {
+                    let collisionPoint = this.getCollisionPoint(A, B, false);
+                    if(B.moves && B.translation != 0 && (B.x.velocity != 0 || B.y.velocity != 0 || (B.expands && (B.x.expansionSpeed != 0 || B.y.expansionSpeed != 0)))) {
+                        const minCollisionPoint = this.getCollisionPoint(A, B, true, B.x.velocity * B.translation, B.y.velocity * B.translation);
+                        if(collisionPoint !== false && (minCollisionPoint === false || minCollisionPoint > collisionPoint)) {
+                            this.preliminaryCollisionAdjustment(B);
+                            collisionPoint = this.getCollisionPoint(A, B, false);
+                        } else {
+                            collisionPoint = minCollisionPoint;
+                        }
                     }
-                }
-                if(collisionPoint !== false && collisionPoint < translation) {
-                    translation = collisionPoint;
+                    if(collisionPoint !== false && collisionPoint < translation) {
+                        translation = collisionPoint;
+                    }
                 }
             }
         }
@@ -488,10 +507,10 @@ class Level {
             }
         }
     }
-    onEdge(A, side, d, otherD, _escape, boo) {
+    onEdge(A, side, d, otherD, _escape, boo, canEscape = true) {
         A.touchingStatic[side] = true;
         if(boo) {
-            if(A === this.player && this.leavingTo === null) {
+            if(canEscape && A === this.player && this.leavingTo === null) {
                 for(const escape of this.escapes[side]) {
                     if(A[otherD].position >= escape.lowerBound && A[otherD].position + A[otherD].size <= escape.upperBound) {
                         this.escapingSide = side;
@@ -520,46 +539,66 @@ class Level {
             A[dir].velocity = maximumVelocity * xSign;
         }
     }
+    doMinMaxAccel(A, dt, canEscape = true) {
+        if(A.moves && (A !== this.player || this.leavingTo === null)) {
+            this.accelerate(A, 'x', dt);
+            this.accelerate(A, 'y', dt);
+        
+            if(epsilonEquals(A.y.position, this.y.min)) {
+                this.onEdge(A, 2, 'y', 'x', -escapeVelocity, A.y.velocity < 0, canEscape);
+            } else if(epsilonEquals(A.y.position + A.y.size, this.y.max)) {
+                this.onEdge(A, 1, 'y', 'x', escapeVelocity, this.getEffectiveVelocity(A, 'y', false) > 0, canEscape);
+            }
+            if(epsilonEquals(A.x.position, this.x.min)) {
+                this.onEdge(A, 0, 'x', 'y', -escapeVelocity, A.x.velocity < 0, canEscape);
+            } else if(epsilonEquals(A.x.position + A.x.size, this.x.max)) {
+                this.onEdge(A, 3, 'x', 'y', escapeVelocity, this.getEffectiveVelocity(A, 'x', false) > 0, canEscape);
+            }
+        }
+    }
+    ratioAndReset(block, dt) {
+        if(block.touchesOthers) {
+            block.touching = [[], [], [], []]; // left, up, down, right (other block is on the left, other block is above, etc.)
+            block.touchingStatic = [false, false, false, false];
+        }
+        if(block.moves) {
+            if(block.touchesOthers && block.touchable) {
+                block.x.marked = true; // used as placeholder, will be set to true
+                block.y.marked = true;
+                block.x.bonus = 0;
+                block.y.bonus = 0;
+            }
+            let ratio = 1;
+            let absX = block.x.velocity;
+            let absY = block.y.velocity;
+            if(block.expands) {
+                if((absX > 0) == (block.x.expansionSpeed > 0)) {
+                    absX += block.x.expansionSpeed;
+                }
+                if((absY > 0) == (block.y.expansionSpeed > 0)) {
+                    absY += block.y.expansionSpeed;
+                }
+            }
+            absX = Math.abs(absX);
+            absY = Math.abs(absY);
+            if(absX > absY) {
+                ratio = maximumReasonableTranslation / (absX * dt);
+            } else {
+                ratio = maximumReasonableTranslation / (absY * dt);
+            }
+            block.translation = dt;
+            if(ratio < 1) {
+                console.log ("L + Ratio");
+                console.log (absX);
+                console.log (absY);
+                console.log (dt);
+                block.translation *= ratio;
+            }
+        }
+    }
     updateCollisions(dt, FIRSTFRAME = false) {
         for(const block of this.blocks) {
-            if(block.touchesOthers) {
-                block.touching = [[], [], [], []]; // left, up, down, right (other block is on the left, other block is above, etc.)
-                block.touchingStatic = [false, false, false, false];
-            }
-            if(block.moves) {
-                if(block.touchesOthers && block.touchable) {
-                    block.x.marked = true; // used as placeholder, will be set to true
-                    block.y.marked = true;
-                    block.x.bonus = 0;
-                    block.y.bonus = 0;
-                }
-                let ratio = 1;
-                let absX = block.x.velocity;
-                let absY = block.y.velocity;
-                if(block.expands) {
-                    if((absX > 0) == (block.x.expansionSpeed > 0)) {
-                        absX += block.x.expansionSpeed;
-                    }
-                    if((absY > 0) == (block.y.expansionSpeed > 0)) {
-                        absY += block.y.expansionSpeed;
-                    }
-                }
-                absX = Math.abs(absX);
-                absY = Math.abs(absY);
-                if(absX > absY) {
-                    ratio = maximumReasonableTranslation / (absX * dt);
-                } else {
-                    ratio = maximumReasonableTranslation / (absY * dt);
-                }
-                block.translation = dt;
-                if(ratio < 1) {
-                    console.log ("L + Ratio");
-                    console.log (absX);
-                    console.log (absY);
-                    console.log (dt);
-                    block.translation *= ratio;
-                }
-            }
+            this.ratioAndReset(block, dt);
         }
         for(const A of this.blocks) {
             if(A.moves) {
@@ -601,21 +640,7 @@ class Level {
         }
         const starters = [[], [], [], []];
         for(const A of this.blocks) {
-            if(A.moves && (A !== this.player || this.leavingTo === null)) {
-                this.accelerate(A, 'x', dt);
-                this.accelerate(A, 'y', dt);
-            
-                if(epsilonEquals(A.y.position, this.y.min)) {
-                    this.onEdge(A, 2, 'y', 'x', -escapeVelocity, A.y.velocity < 0);
-                } else if(epsilonEquals(A.y.position + A.y.size, this.y.max)) {
-                    this.onEdge(A, 1, 'y', 'x', escapeVelocity, this.getEffectiveVelocity(A, 'y', false) > 0);
-                }
-                if(epsilonEquals(A.x.position, this.x.min)) {
-                    this.onEdge(A, 0, 'x', 'y', -escapeVelocity, A.x.velocity < 0);
-                } else if(epsilonEquals(A.x.position + A.x.size, this.x.max)) {
-                    this.onEdge(A, 3, 'x', 'y', escapeVelocity, this.getEffectiveVelocity(A, 'x', false) > 0);
-                }
-            }
+            this.doMinMaxAccel(A, dt);
         }
         const aboveRightCheckers = [];
         const aboveLeftCheckers = [];

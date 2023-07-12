@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--  -->
+<html lang="en">
+    <head>
+        <link href='./style.css' rel='stylesheet'>
+        <title>runner - level builder</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        <main>
+            <section id="game">
+            </section>
+            <div id="preview-box" class="hidden"></div>
+        </main>
+        <footer>
+            <nav id="builder-menu">
+                <section id="snap">
+                    <p>Snap</p>
+                    <button id="snap-off">Off</button>
+                    <button id="snap-1x">1x</button>
+                    <button id="snap-2x">2x</button>
+                </section>
+                <p id="instructions">q: stop player, e: cancel motion, f: kill</p>
+                <section id="add-blocks">
+                    <div id="delete"><img src="./images/trash.png"/></div>
+                </section>
+            </nav>
+        </footer>
+        <script type="module" src="./builder.js"></script>
+    </body>
+</html>

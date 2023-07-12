@@ -13,9 +13,10 @@ nav#menu {
     width: 90vw;
     left: 5vw;
     top: 1vw;
-    background-color: #6e44ff;
+    background-color: black;
     border-radius: 1vw;
     padding: 0.75vw;
+    z-index: 101;
 }
 nav#menu button {
     padding: 0.2vw;
@@ -104,4 +105,216 @@ div#cover {
     top: 0;
     left: 0;
     opacity: 0;
+}
+div.hidden {
+    display: none;
+}
+div#preview-box {
+    background-color: rgb(5, 202, 246);
+    opacity: 0.3;
+    content: "";
+    z-index: 100;
+    position: absolute;
+}
+div#preview-box.invalid {
+    background-color: red;
+}
+div.selected11::after {
+    width: 1.5vw;
+    height: 1.5vw;
+    right: -0.75vw;
+    top: -0.75vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expand11;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+div.selected-11::after {
+    width: 1.5vw;
+    height: 1.5vw;
+    left: -0.75vw;
+    top: -0.75vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expand-11;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+div.selected-1-1::after {
+    width: 1.5vw;
+    height: 1.5vw;
+    left: -0.75vw;
+    bottom: -0.75vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expand-1-1;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+div.selected1-1::after {
+    width: 1.5vw;
+    height: 1.5vw;
+    right: -0.75vw;
+    bottom: -0.75vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expand1-1;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+div.selected10::after {
+    width: 1vw;
+    height: calc(100% + 0.5vw);
+    right: -0.5vw;
+    top: -0.25vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expandy;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+div.selected01::after {
+    height: 1vw;
+    width: calc(100% + 0.5vw);
+    top: -0.5vw;
+    left: -0.25vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expandx;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+div.selected0-1::after {
+    height: 1vw;
+    width: calc(100% + 0.5vw);
+    bottom: -0.5vw;
+    left: -0.25vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expandx;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+div.selected-10::after {
+    width: 1vw;
+    height: calc(100% + 0.5vw);
+    left: -0.5vw;
+    top: -0.25vw;
+    content: "";
+    position: absolute;
+    background-color: rgb(5, 202, 246);
+    animation-name: expandy;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+section#game div.selected::before {
+    width: calc(100% - 0.5vw);
+    height: calc(100% - 0.5vw);
+    left: -0.25vw;
+    top: -0.25vw;
+    content: "";
+    position: absolute;
+    border: 0.5vw solid rgb(247, 105, 171);
+    animation-name: zoom;
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+@keyframes zoom {
+    0% { border-width: 0; width: 100%; height: 100%; left: 0; top: 0; }
+}
+@keyframes expandx {
+    0% {width: 0; left: 50%;}
+}
+@keyframes expandy {
+    0% {height: 0; top: 50%;}
+}
+@keyframes expand11 {
+    0% {top: 0; right: 0; width: 0; height: 0}
+}
+@keyframes expand1-1 {
+    0% {bottom: 0; right: 0; width: 0; height: 0}
+}
+@keyframes expand-1-1 {
+    0% {bottom: 0; left: 0; width: 0; height: 0}
+}
+@keyframes expand-11 {
+    0% {top: 0; left: 0; width: 0; height: 0}
+}
+nav#builder-menu {
+    position: absolute;
+    z-index: 100;
+    bottom: 2.5vw;
+    width: 95vw;
+    left: 2.5vw;
+    background-color: #ff90b3;
+    padding: 1vw;
+    border-radius: 1vw;
+}
+nav#builder-menu section#snap {
+    background-color: #ffc2e2;
+    padding: 1vw;
+    border-radius: 1vw;
+    display: inline-block;
+}
+nav#builder-menu section#snap p {
+    display: inline;
+    color: #6e44ff;
+}
+nav#builder-menu section#snap button {
+    display: inline;
+    background-color: #ff90b3;
+    color: #6e44ff;
+    border: none;
+    border-radius: 0.5vw;
+    padding: 0.5vw;
+}
+nav#builder-menu section#snap button:hover, nav#builder-menu section#snap button.selected {
+    background-color: #6e44ff;
+    color: #ff90b3;
+}
+nav#builder-menu p#instructions {
+    display: inline;
+    color: #6e44ff;
+    background-color: #b892ff;
+    padding: 0.5vw;
+    border-radius: 0.5vw;
+}
+section#add-blocks {
+    display: inline-block;
+    position: absolute;
+}
+div.builder-adder {
+    position: relative;
+    display: inline-block;
+    width: 3vw;
+    height: 3vw;
+    margin-left: 1vw;
+    opacity: 0.7;
+}
+div.builder-adder.selected {
+    opacity: 1;
+}
+nav#builder-menu div#delete {
+    display: inline-block;
+    position: relative;
+    margin-left: 1vw;
+    border:none;
+    background-color: red;
+    border-radius: 0.5vw;
+    opacity: 0.7;
+    padding: 0.2vw;
+}
+nav#builder-menu div#delete.selected {
+    opacity: 1;
+}
+nav#builder-menu div#delete img {
+    width: 3vw;
 }

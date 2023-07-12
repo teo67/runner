@@ -1,32 +1,34 @@
 import MovingBlock from './movingBlock.js';
+import keysDown from './keyListener.js';
 const forceDueToKeyX = 200;
 const forceDueToKeyY = 400;
 const jumpLimit = 0.4;
-const flying = true;
 const killkey = 'f';
 class Player extends MovingBlock {
-    constructor() {
-        super(0, 0, 5, 5, 5, true, "player");
+    constructor(flies = false, phases = false) {
+        super(0, 0, 5, 5, 5, !flies, "player");
+        this.flies = flies;
         this.updates = true;
-        this.keysDown = {};
-        document.addEventListener("keydown", event => {
-            this.keysDown[event.key] = true;
-        });
-        document.addEventListener("keyup", event => {
-            this.keysDown[event.key] = false;
-        });
-        this.keyFx = 0;
-        this.keyFy = 0;
         this.jumpCharge = -1;
+        if(phases) {
+            this.touchable = false;
+        }
     }
     update(dt) {
-        if(this.keysDown[killkey]) {
+        if(keysDown[killkey]) {
             throw "killed"; // for testing
+        }
+        if(this.flies && keysDown["q"]) {
+            this.x.velocity = 0;
+            this.y.velocity = 0;
+            return;
         }
         let fx = 0;
         let fy = 0;
-        if(this.keysDown["w"] && !this.touchingStatic[1]) {
-            if(flying) {
+        this.x.acceleration = 0;
+        this.y.acceleration = this.flies ? 0 : -45;
+        if(keysDown["w"] && !this.touchingStatic[1]) {
+            if(this.flies) {
                 fy++;
             } else if(this.touchingStatic[2] || this.touching[2].length > 0) {
                 this.jumpCharge = 0;
@@ -34,28 +36,31 @@ class Player extends MovingBlock {
                 this.y.acceleration = 0;
             } else if(this.jumpCharge >= 0) {
                 this.jumpCharge += dt;
+                this.y.acceleration = 0;
                 if(this.jumpCharge >= jumpLimit) {
                     this.jumpCharge = -1;
-                    this.applyConstantForce(-45 * this.m, 'y');
                 }
             }
         } else if(this.jumpCharge != -1) {
             this.jumpCharge = -1;
-            this.applyConstantForce(-45 * this.m, 'y');
         }
-        if(this.keysDown["a"]) {
+        if(keysDown["a"]) {
             fx--;
         }
-        if(this.keysDown["s"]) {
+        if(keysDown["s"]) {
             fy--;
         }
-        if(this.keysDown["d"]) {
+        if(keysDown["d"]) {
             fx++;
         }
-        this.applyConstantForce(forceDueToKeyX * (fx - this.keyFx), 'x');
-        this.applyConstantForce(forceDueToKeyY * (fy - this.keyFy), 'y');
-        this.keyFx = fx;
-        this.keyFy = fy;
+        if(this.flies || this.touching[1].length > 0 || this.touching[2].length > 0 || this.touchingStatic[1] || this.touchingStatic[2]) {
+            fx -= 0.3 * Math.sign(this.x.velocity);
+        }
+        if(this.flies || this.touching[0].length > 0 || this.touching[3].length > 0 || this.touchingStatic[0] || this.touchingStatic[3]) {
+            fy -= 0.3 * Math.sign(this.y.velocity);
+        }
+        this.applyConstantForce(forceDueToKeyX * fx, 'x');
+        this.applyConstantForce(forceDueToKeyY * fy, 'y');
     }
 }
 export default Player;

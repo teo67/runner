@@ -11,7 +11,6 @@ button.updates = true;
 button.yreceivesMomentum = false;
 button.xreceivesMomentum = false;
 button.update = () => {
-    console.log(button.y.expansionSpeed)
     if(button.touching[1].length > 0) {
         button.y.expansionSpeed = -8;
         if(button.y.size <= bMH) {
