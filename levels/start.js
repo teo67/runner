@@ -1,6 +1,6 @@
 import Level from '../src/level.js';
-import Wall from '../src/wall.js';
-import MovingBlock from '../src/movingBlock.js';
+import Wall from '../src/Wall.js';
+import MovingBlock from '../src/MovingBlock.js';
 const bH = 5;
 const bMH = 1;
 const button = new MovingBlock(-10, -10, 5, bH, 5, false, 'button');

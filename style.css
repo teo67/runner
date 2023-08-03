@@ -106,7 +106,7 @@ div#cover {
     left: 0;
     opacity: 0;
 }
-div.hidden {
+.hidden {
     display: none;
 }
 div#preview-box {
@@ -317,4 +317,76 @@ nav#builder-menu div#delete.selected {
 }
 nav#builder-menu div#delete img {
     width: 3vw;
+}
+section#property-editor {
+    position: absolute;
+    background-color: #ff90b3;
+    padding: 1vw;
+    top: 1vw;
+    left: 1vw;
+    border-radius: 1vw;
+}
+section#property-editor input {
+    display: block;
+    background-color: #b892ff;
+    color: black;
+    font-family: "Verdana";
+    margin-bottom: 1vw;
+    border: none;
+    border-radius: 0.3vw;
+}
+section#property-editor label {
+    display: block;
+    color: black;
+    margin-bottom: 0.5vw;
+}
+section#property-editor button {
+    background-color: lightgray;
+    border: none;
+    border-radius: 0.3vw;
+    padding: 0.3vw;
+    margin-right: 0.5vw;
+    color: gray;
+}
+section#property-editor button:hover {
+    background-color: gray;
+    color: lightgray;
+}
+button#export {
+    display: inline-block;
+    margin-left: 1vw;
+    background-color: #ffc2e2;
+    border: none;
+    border-radius: 0.5vw;
+    padding: 0.5vw;
+    font-size: 1vw;
+    transition: all ease 0.5s;
+    border: 0.5vw solid transparent;
+}
+button#export:hover {
+    border: 0.5vw solid #6e44ff;
+}
+p#notification {
+    position: absolute;
+    background-color: #b892ff;
+    color: black;
+    padding: 1vw;
+    border-radius: 1vw;
+    right: 1vw;
+    top: 1vw;
+    transition: all ease 0.5s;
+    opacity: 1;
+}
+p#notification.faded {
+    opacity: 0;
+}
+div.escape {
+    position: absolute;
+    background-color: #ff90b3;
+    border: 0.5vw solid transparent;
+    transition: all ease 0.2s;
+}
+div.escape:hover {
+    background-color: #ffc2e2;
+    border-color: rgb(247, 105, 171);
 }

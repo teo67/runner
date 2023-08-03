@@ -1,7 +1,12 @@
-import Block from './block.js';
+import Block from './Block.js';
+const _defaultData = {
+    classname: "block"
+};
 class Wall extends Block {
-    constructor(x, y, w, h, classname = 'block') {
-        super(x, y, w, h, classname);
+    cName = "Wall";
+    defaultData = _defaultData;
+    constructor(x, y, w, h, data = _defaultData) {
+        super(x, y, w, h, data);
     }
 }
 Wall.prototype.moves = false;

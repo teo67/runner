@@ -12,6 +12,14 @@
             <section id="game">
             </section>
             <div id="preview-box" class="hidden"></div>
+            <section id="property-editor" class="hidden">
+                <section id="properties"></section>
+                <label for="special">mark this block with title:</label>
+                <input id="special-marker" type="text" name="special" value=""/>
+                <button id="save-props">save</button>
+                <button id="close-props">close</button>
+            </section>
+            <p id="notification" class="faded"></p>
         </main>
         <footer>
             <nav id="builder-menu">
@@ -22,6 +30,7 @@
                     <button id="snap-2x">2x</button>
                 </section>
                 <p id="instructions">q: stop player, e: cancel motion, f: kill</p>
+                <button id="export">Export</button>
                 <section id="add-blocks">
                     <div id="delete"><img src="./images/trash.png"/></div>
                 </section>

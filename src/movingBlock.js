@@ -1,11 +1,17 @@
-import Block from './block.js';
+import Block from './Block.js';
+const _defaultData = {
+    m: 5,
+    gravity: true,
+    classname: 'movingblock'
+};
 class MovingBlock extends Block {
-    
-    constructor(x, y, w, h, m, gravity = true, classname = "movingblock") {
-        super(x, y, w, h, classname);
+    defaultData = _defaultData;
+    cName = "MovingBlock";
+    constructor(x, y, w, h, data = _defaultData) {
+        super(x, y, w, h, data);
         this.x.start = x;
         this.y.start = y;
-        this.m = m;
+        this.m = data.m;
         this.x.velocity = 0;
         this.y.velocity = 0;
         this.x.acceleration = 0;
@@ -18,7 +24,7 @@ class MovingBlock extends Block {
         this.y.marked = false;
         this.bonus = 0;
         this.bonus = 0;
-        if(gravity) {
+        if(data.gravity) {
             this.applyConstantForce(-45 * this.m, 'y');
         }
     }

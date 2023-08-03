@@ -5,8 +5,13 @@ can be touched
 receives momentum
 updates
 */
+const _defaultData = {
+    classname: "block"
+};
 class Block {
-    constructor(x, y, w, h, classname = "block") {
+    defaultData = _defaultData;
+    cName = "Block";
+    constructor(x, y, w, h, data = _defaultData) {
         this.x = {};
         this.y = {};
         this.x.position = x;
@@ -15,7 +20,7 @@ class Block {
         this.y.size = h;
         this.updates = false;
         this.element = document.createElement("div");
-        this.element.classList.add(classname);
+        this.element.classList.add(data.classname);
         this.updateScale();
     }
     reset() {}

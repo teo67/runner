@@ -158,6 +158,7 @@ class Level {
             this.doMinMaxAccel(this.player, dt, false);
             this.player.update(dt);
         } else {
+            console.log(this.blocks);
             this.updateCollisions(dt);
         }
         this.updateView(!building);
@@ -319,12 +320,12 @@ class Level {
             } else {
                 B.touchingStatic[i] = true;
                 if(bool && B.moves) {
-                    if(A.expands && side % 2 == 1 && A[dir].expansionSpeed < 0) {
-                        A[dir].velocity = -A[dir].expansionSpeed;
+                    if(B.expands && side % 2 == 1 && B[dir].expansionSpeed < 0) {
+                        B[dir].velocity = -B[dir].expansionSpeed;
                     } else {
-                        A[dir].velocity = 0;
-                        if(A.expands && A[dir].expansionSpeed > 0) {
-                            A[dir].expansionSpeed = 0;
+                        B[dir].velocity = 0;
+                        if(B.expands && B[dir].expansionSpeed > 0) {
+                            B[dir].expansionSpeed = 0;
                         }
                     }
                 }

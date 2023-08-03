@@ -1,4 +1,4 @@
-import MovingBlock from './movingBlock.js';
+import MovingBlock from './MovingBlock.js';
 import keysDown from './keyListener.js';
 const forceDueToKeyX = 200;
 const forceDueToKeyY = 400;
@@ -6,7 +6,11 @@ const jumpLimit = 0.4;
 const killkey = 'f';
 class Player extends MovingBlock {
     constructor(flies = false, phases = false) {
-        super(0, 0, 5, 5, 5, !flies, "player");
+        super(0, 0, 5, 5, {
+            m: 5,
+            gravity: !flies, 
+            classname: "player"
+        });
         this.flies = flies;
         this.updates = true;
         this.jumpCharge = -1;
@@ -61,6 +65,7 @@ class Player extends MovingBlock {
         }
         this.applyConstantForce(forceDueToKeyX * fx, 'x');
         this.applyConstantForce(forceDueToKeyY * fy, 'y');
+        console.log(this.x.velocity);
     }
 }
 export default Player;

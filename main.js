@@ -5,7 +5,7 @@ import importLevel from './src/importLevel.js';
 const game = document.getElementById("game");
 const fpsCounter = document.getElementById("FPS");
 const cache = {};
-const startName = 'start';
+const startName = 'test';
 const player = new Player();
 let lastTime = Date.now();
 let frameCount = 0;
