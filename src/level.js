@@ -158,7 +158,6 @@ class Level {
             this.doMinMaxAccel(this.player, dt, false);
             this.player.update(dt);
         } else {
-            console.log(this.blocks);
             this.updateCollisions(dt);
         }
         this.updateView(!building);

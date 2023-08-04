@@ -3,6 +3,7 @@ import Level from './src/level.js';
 import Wall from './src/Wall.js';
 import keysDown from './src/keyListener.js';
 import MovingBlock from './src/MovingBlock.js';
+import importLevel from './src/importLevel.js';
 const game = document.getElementById("game");
 const propertyEditor = document.getElementById("property-editor");
 const specialMarker = document.getElementById("special-marker");
@@ -18,6 +19,8 @@ const snap2x = document.getElementById("snap-2x");
 const blockSection = document.getElementById("add-blocks");
 const deleteButton = document.getElementById("delete");
 const player = new Player(true, true);
+let level;
+let escapes;
 const preview = document.getElementById("preview-box");
 let lastTime = Date.now();
 let selectedObject = null;
@@ -34,13 +37,17 @@ const addableBlocks = {
     "movingblock": (x, y, w, h) => new MovingBlock(x, y, w, h)
 };
 
-
+let cachedLevel = null;
+let cachedEscapes = null;
 let moveMode = false;
 let valid = true;
 let currentSnapElement = snapOff;
 let currentBuildElement = null;
 let deleting = false;
 let editingProps = false;
+let makingEscape = false;
+const occupied = () => selected || deleting || editingProps;
+const altOccupied = () => makingEscape || editingProps; // less restrictive
 const changeSnap = ev => {
     currentSnapElement.classList.remove("selected");
     ev.target.classList.add("selected");
@@ -94,17 +101,15 @@ const testObject = (obj, isLevel) => {
         }
     }
 }
-const makeEscapes = level => {
-    const escapes = [];
+const makeEscapes = () => {
+    escapes = [];
     for(let i = 0; i < 4; i++) {
         const esc = document.createElement("div");
         esc.classList.add("escape");
-        level.element.appendChild(esc);
         escapes.push(esc);
     }
-    return escapes;
 }
-const updateEscapePositions = (level, escapes) => { // left up down right
+const updateEscapePositions = () => { // left up down right
     level.updatePose(level.x.min - 3, level.y.min, escapes[0]);
     level.updatePose(level.x.min, level.y.max + 1, escapes[1]);
     level.updatePose(level.x.min, level.y.min - 3, escapes[2]);
@@ -119,28 +124,48 @@ const updateEscapePositions = (level, escapes) => { // left up down right
         }
     }
 }
-const main = async () => {
-    const level = new Level([]);
+const setupEscape = i => {
+    moveMode = true;
+    moveTag.x = 0;
+    moveTag.y = 0;
+    scale.x = 0;
+    scale.y = 0;
+    preview.style.width = (i == 0 || i == 3) ? `${level.x.max - level.x.min}vw` : '0.2vw';
+    preview.style.height = (i == 1 || i == 2) ? `${level.y.max - level.y.min}vw` : '0.2vw';
+    preview.style.left = '0vw';
+    preview.style.bottom = '0vw';
+}
+const createLevel = () => {
+    level = new Level([]);
     level.setPlayer(player);
     level.setBoundaries(0, 10, 0, 10, false);
+}
+const loadLevel = () => {
     level.load(game, 0, 0, true, false);
     level.element.appendChild(preview);
-    const escapes = makeEscapes(level);
-    updateEscapePositions(level, escapes);
+}
+const appendEscapes = () => {
+    for(let i = 0; i < 4; i++) {
+        level.element.appendChild(escapes[i]);
+    }
+}
+const main = async () => {
+    createLevel();
+    loadLevel();
+    makeEscapes();
+    updateEscapePositions();
+    appendEscapes();
     for(let i = 0; i < 4; i++) {
         escapes[i].onclick = () => {
-            if(selected) {
+            if(occupied()) {
                 return;
             }
             selected = true;
             selectedObject = i;
-            moveMode = true;
-            scale.x = 0;
-            scale.y = 0;
-            preview.style.width = (i == 0 || i == 3) ? `${level.x.max - level.x.min}vw` : '0.2vw';
-            preview.style.height = (i == 1 || i == 2) ? `${level.y.max - level.y.min}vw` : '0.2vw';
-            preview.style.left = '0vw';
-            preview.style.bottom = '0vw';
+            deleting = false;
+            makingEscape = true;
+            preview.classList.remove("hidden");
+            setupEscape(i);
         }
     }
     propCloser.onclick = () => {
@@ -212,6 +237,9 @@ const main = async () => {
     }
     document.oncontextmenu = event => {
         event.preventDefault();
+        if(occupied()) {
+            return;
+        }
         if(selectedObject !== null) {
             editingProps = true;
             for(const key in selectedObject.defaultData) {
@@ -233,7 +261,7 @@ const main = async () => {
         mouse.x = 100 * event.clientX/document.documentElement.clientWidth - level.x.offset + level.x.min;
         mouse.y = 100 * (document.documentElement.clientHeight - event.clientY)/document.documentElement.clientWidth - level.y.offset + level.y.min;
         if(selected) {
-            if(typeof selectedObject == 'number' && !moveMode) {
+            if(makingEscape && !moveMode) {
                 if(scale.x != 0 && mouse.x != other.x) {
                     const newX = Math.sign(mouse.x - other.x);
                     if(newX == 1 && scale.x != 1) {
@@ -265,11 +293,14 @@ const main = async () => {
             }
         }
     }
-    document.onmousedown = ev => {
+    document.onmousedown = async ev => {
         if(ev.button != 0 || editingProps) {
             return;
         }
         if(menu.contains(ev.target)) {
+            return;
+        }
+        if(escapes.includes(ev.target)) {
             return;
         }
         if(!selected && selectedObject !== null) {
@@ -293,7 +324,7 @@ const main = async () => {
             preview.style.width = `${Math.abs(changing.x - other.x)}vw`;
             preview.style.height = `${Math.abs(changing.y - other.y)}vw`;
         } else if(selected && valid) {
-            if(typeof selectedObject == 'number') {
+            if(makingEscape) {
                 if(moveMode) {
                     moveMode = false;
                     other.x = mouse.x;
@@ -304,7 +335,44 @@ const main = async () => {
                         scale.x = 1;
                     }
                 } else {
-                    // TODO 1246
+                    editingProps = true; // proxy
+                    let resp = window.prompt("What level should this escape go to?","");
+                    while(true) {
+                        if(resp == null) {
+                            selected = false;
+                            preview.classList.add("hidden");
+                            makingEscape = false;
+                            selectedObject = null;
+                            return;
+                        } else {
+                            if(resp == '/create') {
+                                cachedLevel = level;
+                                cachedEscapes = escapes;
+                                createLevel();
+                                player.x.position = 0;
+                                player.y.position = 0;
+                                break;
+                            } else {
+                                try {
+                                    const nextLevel = await importLevel({}, resp, player);
+                                    cachedLevel = level;
+                                    cachedEscapes = escapes;
+                                    level = nextLevel;
+                                    player.x.position = (selectedObject == 3) ? level.x.max - 5 : level.x.min;
+                                    player.y.position = (selectedObject == 1) ? level.y.max - 5 : level.y.min;
+                                    break;
+                                } catch {
+                                    resp = window.prompt("That level does not exist! Try again (use /create to make a new level):","");
+                                }
+                            }
+                        }
+                    }
+                    editingProps = false;
+                    cachedLevel.unload(game);
+                    loadLevel();
+                    appendEscapes();
+                    updateEscapePositions();
+                    setupEscape(selectedObject);
                 }
             } else {
                 if(moveMode) {
@@ -357,7 +425,7 @@ const main = async () => {
         element.classList.add(key);
         element.classList.add("builder-adder");
         element.onclick = () => {
-            if(editingProps) {
+            if(altOccupied()) {
                 return;
             }
             if(currentBuildElement !== null) {
@@ -390,7 +458,7 @@ const main = async () => {
         blockNum++;
     }
     deleteButton.onclick = () => {
-        if(editingProps) {
+        if(altOccupied()) {
             return;
         }
         deleteButton.classList.add("selected");
@@ -474,7 +542,7 @@ const main = async () => {
                             break;
                         }
                     }
-                } else if (typeof selectedObject == 'number') {
+                } else if (makingEscape) {
                     if(selectedObject == 0 || selectedObject == 3) {
                         if(mouse.y < level.y.min || mouse.y > level.y.max) {
                             valid = false;
@@ -513,6 +581,10 @@ const main = async () => {
                 if(deleting) {
                     deleting = false;
                     deleteButton.classList.remove("selected");
+                }
+                if(makingEscape) {
+                    makingEscape = false;
+                    selectedObject = null;
                 }
             }
         }

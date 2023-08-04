@@ -65,7 +65,6 @@ class Player extends MovingBlock {
         }
         this.applyConstantForce(forceDueToKeyX * fx, 'x');
         this.applyConstantForce(forceDueToKeyY * fy, 'y');
-        console.log(this.x.velocity);
     }
 }
 export default Player;
