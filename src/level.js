@@ -50,12 +50,7 @@ class Level {
         this.y.max = maxY;
         this.finishLoading(boundaries);
     }
-    connect(side, lowerBound, upperBound, otherLevel, otherLowerBound, otherUpperBound) {
-        // UNDER CONSTRUCTION
-        // this.addEscape(side, lowerBound, upperBound, otherLevel, otherUpperBound/2 + otherLowerBound/2 - 2.5);
-        // otherLevel.addEscape(3 - side, otherLowerBound, otherUpperBound, this, upperBound/2 + lowerBound/2 - 2.5);
-    }
-    addEscape(side, lowerBound, upperBound, otherLevel, spawnPos, _otherSettingValue) {
+    addEscape(side, lowerBound, upperBound, otherLevel, spawnPos) {
         const visual = document.createElement("div");
         const behindVisual = document.createElement("div");
         visual.classList.add("escape");
@@ -67,24 +62,22 @@ class Level {
         const dir = horizontal ? 'x' : 'y';
         const positive = side % 2 != 0;
         let settingValue = this[dir][positive ? 'max' : 'min'];
-        let otherSettingValue = _otherSettingValue - 10;
         if(side % 2 == 0) {
             settingValue -= 5;
-            otherSettingValue += 15;
         }
-        
+        console.log(settingValue);
         if(horizontal) {
             this.updatePose(settingValue, lowerBound, visual);
             this.updatePose(settingValue, lowerBound, behindVisual);
             visual.style.height = `${upperBound - lowerBound}vw`;
             behindVisual.style.height = `${upperBound - lowerBound}vw`;
-            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, otherSettingValue, spawnPos));
+            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, spawnPos));
         } else {
             this.updatePose(lowerBound, settingValue, visual);
             this.updatePose(lowerBound, settingValue, behindVisual);
             visual.style.width = `${upperBound - lowerBound}vw`;
             behindVisual.style.width = `${upperBound - lowerBound}vw`;
-            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, spawnPos, otherSettingValue));
+            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, spawnPos));
         }
     }
     load(game, x = 0, y = 0, firstLevel = false, boundaries = true) {

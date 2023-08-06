@@ -1,7 +1,7 @@
 import Player from './src/player.js';
 import Level from './src/level.js';
 import Wall from './src/Wall.js';
-import keysDown from './src/keyListener.js';
+import glob from './src/global.js';
 import MovingBlock from './src/MovingBlock.js';
 import importLevel from './src/importLevel.js';
 const game = document.getElementById("game");
@@ -19,6 +19,7 @@ const snap2x = document.getElementById("snap-2x");
 const blockSection = document.getElementById("add-blocks");
 const deleteButton = document.getElementById("delete");
 const player = new Player(true, true);
+let levelName = 'start';
 let level;
 let escapes;
 const preview = document.getElementById("preview-box");
@@ -36,9 +37,9 @@ const addableBlocks = {
     "block": (x, y, w, h) => new Wall(x, y, w, h),
     "movingblock": (x, y, w, h) => new MovingBlock(x, y, w, h)
 };
-
+let cachedLevelName = "";
 let cachedLevel = null;
-let cachedEscapes = null;
+let cachedBounds = null;
 let moveMode = false;
 let valid = true;
 let currentSnapElement = snapOff;
@@ -105,7 +106,7 @@ const makeEscapes = () => {
     escapes = [];
     for(let i = 0; i < 4; i++) {
         const esc = document.createElement("div");
-        esc.classList.add("escape");
+        esc.classList.add("escape-adder");
         escapes.push(esc);
     }
 }
@@ -149,8 +150,87 @@ const appendEscapes = () => {
         level.element.appendChild(escapes[i]);
     }
 }
+const setCaches = () => {
+    cachedLevel = level;
+    cachedLevelName = levelName;
+    const dir = selectedObject == 0 || selectedObject == 3 ? 'y' : 'x';
+    cachedBounds = [other[dir], mouse[dir]];
+}
+const clearCaches = () => {
+    cachedLevel = null;
+    cachedLevelName = "";
+    cachedBounds = null;
+}
+const setEscapes = () => {
+    const dir = selectedObject == 0 || selectedObject == 3 ? 'y' : 'x';
+    const firstLower = Math.min(cachedBounds[0], cachedBounds[1]);
+    const firstUpper = Math.max(cachedBounds[0], cachedBounds[1]);
+    const secondLower = Math.min(other[dir], mouse[dir]);
+    const secondUpper = Math.max(other[dir], mouse[dir]);
+    cachedLevel.addEscape(selectedObject, firstLower, firstUpper, levelName, secondLower/2 + secondUpper/2 - 2.5); // (side, lowerBound, upperBound, otherLevel, spawnPos, _otherSettingValue)
+    level.addEscape(3 - selectedObject, secondLower, secondUpper, cachedLevelName, firstLower/2 + firstUpper/2 - 2.5);
+}
+const copyLevelToClipboard = () => {
+    let start = "import Level from '../src/level.js';\nimport glob from '../src/global.js';";
+    let second = "\nconst level = new Level([";
+    const end = `\nexport default level;`;
+    let middle = "";
+    const imports = [];
+    for(const block of level.blocks) {
+        if(block !== player) {
+            if(!imports.includes(block.cName)) {
+                imports.push(block.cName);
+                start += `\nimport ${block.cName} from '../src/${block.cName}.js';`;
+            }
+            let _middle = `new ${block.cName}(${block.x.position}, ${block.y.position}, ${block.x.size}, ${block.y.size}`;
+            if(block.customData !== undefined) {
+                let allSame = true;
+                let str = "{";
+                for(const item in block.customData) {
+                    let adding = block.customData[item];
+                    if(adding != 'false' && adding != 'true' && (adding.length == 0 || !'0123456789'.includes(adding[0]))) {
+                        adding = '"' + adding + '"';
+                    }
+                    str += `${item}: ${adding}, `;
+                    if(block.customData[item] != `${block.defaultData[item]}`) {
+                        allSame = false;
+                    }
+                }
+                str += "}";
+                if(!allSame) {
+                    _middle += `, ${str}`;
+                } else {
+                    block.customData = undefined;
+                }
+            } 
+            _middle += ")";
+            if(block.marker === undefined || block.marker.length == 0) {
+                middle += `\n    ${_middle},`;
+            } else {
+                second = `\nconst ${block.marker} = ${_middle};` + second;
+                middle += `\n    ${block.marker},`;
+            }
+        }
+    }
+    middle += "\n]);";
+    middle += `\nlevel.setBoundaries(${level.x.min}, ${level.x.max}, ${level.y.min}, ${level.y.max}, !glob.building);`;
+    for(let i = 0; i < 4; i++) {
+        for(const escape of level.escapes[i]) {
+            middle += `\nlevel.addEscape(${i}, ${escape.lowerBound}, ${escape.upperBound}, '${escape.to}', ${escape.spawn});`;
+        }
+    }
+    navigator.clipboard.writeText(start + second + middle + end);
+}
+const giveNotification = text => {
+    notification.innerText = text;
+    notification.classList.remove("faded");
+    setTimeout(() => {
+        notification.classList.add("faded");
+    }, 1000);
+}
 const main = async () => {
-    createLevel();
+    glob.building = true;
+    level = await importLevel({}, levelName, player);
     loadLevel();
     makeEscapes();
     updateEscapePositions();
@@ -187,53 +267,8 @@ const main = async () => {
         }
     }
     _export.onclick = () => {
-        let start = "import Level from '../src/level.js';";
-        let second = "\nconst level = new Level([";
-        const end = `\n]);\nlevel.setBoundaries(${level.x.min}, ${level.x.max}, ${level.y.min}, ${level.y.max});\nexport default level;`;
-        let middle = "";
-        const imports = [];
-        for(const block of level.blocks) {
-            if(block !== player) {
-                if(!imports.includes(block.cName)) {
-                    imports.push(block.cName);
-                    start += `\nimport ${block.cName} from '../src/${block.cName}.js';`;
-                }
-                let _middle = `new ${block.cName}(${block.x.position}, ${block.y.position}, ${block.x.size}, ${block.y.size}`;
-                if(block.customData !== undefined) {
-                    let allSame = true;
-                    let str = "{";
-                    for(const item in block.customData) {
-                        let adding = block.customData[item];
-                        if(adding != 'false' && adding != 'true' && (adding.length == 0 || !'0123456789'.includes(adding[0]))) {
-                            adding = '"' + adding + '"';
-                        }
-                        str += `${item}: ${adding}, `;
-                        if(block.customData[item] != `${block.defaultData[item]}`) {
-                            allSame = false;
-                        }
-                    }
-                    str += "}";
-                    if(!allSame) {
-                        _middle += `, ${str}`;
-                    } else {
-                        block.customData = undefined;
-                    }
-                } 
-                _middle += ")";
-                if(block.marker === undefined || block.marker.length == 0) {
-                    middle += `\n    ${_middle},`;
-                } else {
-                    second = `\nconst ${block.marker} = ${_middle};` + second;
-                    middle += `\n    ${block.marker},`;
-                }
-            }
-        }
-        navigator.clipboard.writeText(start + second + middle + end);
-        notification.innerText = "Level copied to clipboard!";
-        notification.classList.remove("faded");
-        setTimeout(() => {
-            notification.classList.add("faded");
-        }, 500);
+        copyLevelToClipboard();
+        giveNotification("Level copied to clipboard!");
     }
     document.oncontextmenu = event => {
         event.preventDefault();
@@ -335,44 +370,58 @@ const main = async () => {
                         scale.x = 1;
                     }
                 } else {
-                    editingProps = true; // proxy
-                    let resp = window.prompt("What level should this escape go to?","");
-                    while(true) {
-                        if(resp == null) {
-                            selected = false;
-                            preview.classList.add("hidden");
-                            makingEscape = false;
-                            selectedObject = null;
-                            return;
-                        } else {
-                            if(resp == '/create') {
-                                cachedLevel = level;
-                                cachedEscapes = escapes;
-                                createLevel();
-                                player.x.position = 0;
-                                player.y.position = 0;
-                                break;
+                    if(cachedLevel === null) {
+                        editingProps = true; // proxy
+                        let resp = window.prompt("What level should this escape go to?","");
+                        while(true) {
+                            if(resp == null) {
+                                selected = false;
+                                preview.classList.add("hidden");
+                                makingEscape = false;
+                                selectedObject = null;
+                                return;
                             } else {
-                                try {
-                                    const nextLevel = await importLevel({}, resp, player);
-                                    cachedLevel = level;
-                                    cachedEscapes = escapes;
-                                    level = nextLevel;
-                                    player.x.position = (selectedObject == 3) ? level.x.max - 5 : level.x.min;
-                                    player.y.position = (selectedObject == 1) ? level.y.max - 5 : level.y.min;
+                                if(resp.startsWith('/create ') && resp.length > 8) {
+                                    setCaches();
+                                    createLevel();
+                                    levelName = resp.substring(8);
+                                    player.x.position = 0;
+                                    player.y.position = 0;
                                     break;
-                                } catch {
-                                    resp = window.prompt("That level does not exist! Try again (use /create to make a new level):","");
+                                } else {
+                                    try {
+                                        const nextLevel = await importLevel({}, resp, player);
+                                        setCaches();
+                                        level = nextLevel;
+                                        levelName = resp;
+                                        player.x.position = (selectedObject == 3) ? level.x.max - 5 : level.x.min;
+                                        player.y.position = (selectedObject == 1) ? level.y.max - 5 : level.y.min;
+                                        break;
+                                    } catch {
+                                        resp = window.prompt("That level does not exist! Try again (use /create {name} to make a new level):","");
+                                    }
                                 }
                             }
                         }
-                    }
-                    editingProps = false;
-                    cachedLevel.unload(game);
+                        editingProps = false;
+                        cachedLevel.unload(game);
+                        setupEscape(selectedObject);
+                    } else {
+                        setEscapes();
+                        copyLevelToClipboard();
+                        giveNotification(`Target level copied to clipboard! (name: ${levelName})`);
+                        level.unload(game);
+                        level = cachedLevel;
+                        levelName = cachedLevelName;
+                        clearCaches();
+                        makingEscape = false;
+                        selectedObject = null;
+                        selected = false;
+                        preview.classList.add("hidden");
+                    } 
                     loadLevel();
                     appendEscapes();
                     updateEscapePositions();
-                    setupEscape(selectedObject);
                 }
             } else {
                 if(moveMode) {
@@ -569,7 +618,7 @@ const main = async () => {
                     preview.classList.add("invalid");
                 }
             }
-            if(keysDown['e']) {
+            if(glob.keysDown['e']) {
                 if(selected) {
                     selected = false;
                     preview.classList.add("hidden");
@@ -585,6 +634,14 @@ const main = async () => {
                 if(makingEscape) {
                     makingEscape = false;
                     selectedObject = null;
+                    if(cachedLevel != null) {
+                        level = cachedLevel;
+                        levelName = cachedLevelName;
+                        clearCaches();
+                        loadLevel();
+                        appendEscapes();
+                        updateEscapePositions();
+                    }
                 }
             }
         }

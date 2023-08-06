@@ -5,4 +5,7 @@ document.addEventListener("keydown", event => {
 document.addEventListener("keyup", event => {
     keysDown[event.key] = false;
 });
-export default keysDown;
+export default {
+    keysDown: keysDown,
+    building: false
+};

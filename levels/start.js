@@ -1,32 +1,14 @@
 import Level from '../src/level.js';
+import glob from '../src/global.js';
 import Wall from '../src/Wall.js';
 import MovingBlock from '../src/MovingBlock.js';
-const bH = 5;
-const bMH = 1;
-const button = new MovingBlock(-10, -10, 5, bH, 5, false, 'button');
-button.expands = true;
-button.x.expansionSpeed = 0;
-button.y.expansionSpeed = 0;
-button.updates = true;
-button.yreceivesMomentum = false;
-button.xreceivesMomentum = false;
-button.update = () => {
-    if(button.touching[1].length > 0) {
-        button.y.expansionSpeed = -8;
-        if(button.y.size <= bMH) {
-            button.y.expansionSpeed = 0;
-        }
-    } else {
-        button.y.expansionSpeed =3;
-        if(button.y.size >= bH) {
-            button.y.expansionSpeed = 0;
-        }
-    }
-};
-
 const level = new Level([
-    button
+    new Wall(-15, 0, 5, 5),
+    new Wall(-10, 5, 5, 5),
+    new MovingBlock(-10, 10, 5, 5),
+    new Wall(-5, 0, 15, 5),
+    new Wall(5, 5, 5, 15),
 ]);
-level.setBoundaries(-30, 35, -10, 50);
-level.addEscape(3, 0, 10, 'second', 2.5, 0);
+level.setBoundaries(-24.984532666666645, 26.28964941569282, 0, 30.505008347245408, !glob.building);
+level.addEscape(3, 5, 15, 'next', 2.5);
 export default level;

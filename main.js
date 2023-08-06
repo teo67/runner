@@ -5,14 +5,14 @@ import importLevel from './src/importLevel.js';
 const game = document.getElementById("game");
 const fpsCounter = document.getElementById("FPS");
 const cache = {};
-const startName = 'test';
+const startName = 'start';
 const player = new Player();
 let lastTime = Date.now();
 let frameCount = 0;
 let nextSecond = Math.ceil(Date.now()/1000) * 1000;
 const main = async () => {
     let level = await importLevel(cache, startName, player);
-    level.load(game, 0, 0, true);
+    level.load(game, -20, 0, true);
     while(true) {
         frameCount++;
         const ntime = Date.now();
@@ -21,7 +21,11 @@ const main = async () => {
             const nextLevel = await importLevel(cache, level.leavingTo.to, player);
             nextLevel.escapingSide = level.leavingTo.side;
             level.unload(game);
-            nextLevel.load(game, level.leavingTo.spawnX, level.leavingTo.spawnY);
+            const spawnIsY = level.leavingTo.side == 0 || level.leavingTo.side == 3;
+            const isMax = level.leavingTo.side % 2 == 0;
+            const maxMin = isMax ? 'max' : 'min';
+            const edgeAdd = isMax ? 0 : -5;
+            nextLevel.load(game, spawnIsY ? nextLevel.x[maxMin] + edgeAdd : level.leavingTo.spawn, spawnIsY ? level.leavingTo.spawn : nextLevel.y[maxMin] + edgeAdd);
             level = nextLevel;
         }
         lastTime = ntime;
