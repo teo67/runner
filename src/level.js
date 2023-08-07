@@ -50,7 +50,7 @@ class Level {
         this.y.max = maxY;
         this.finishLoading(boundaries);
     }
-    addEscape(side, lowerBound, upperBound, otherLevel, spawnPos) {
+    addEscape(side, lowerBound, upperBound, otherLevel, spawnPos, building) {
         const visual = document.createElement("div");
         const behindVisual = document.createElement("div");
         visual.classList.add("escape");
@@ -71,13 +71,46 @@ class Level {
             this.updatePose(settingValue, lowerBound, behindVisual);
             visual.style.height = `${upperBound - lowerBound}vw`;
             behindVisual.style.height = `${upperBound - lowerBound}vw`;
-            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, spawnPos));
+            
         } else {
             this.updatePose(lowerBound, settingValue, visual);
             this.updatePose(lowerBound, settingValue, behindVisual);
             visual.style.width = `${upperBound - lowerBound}vw`;
             behindVisual.style.width = `${upperBound - lowerBound}vw`;
-            this.escapes[side].push(new Escape(side, lowerBound, upperBound, otherLevel, spawnPos));
+        }
+        const esc = new Escape(side, lowerBound, upperBound, otherLevel, spawnPos)
+        this.escapes[side].push(esc);
+        if(building) {
+            visual.classList.add('build-escape');
+            visual.innerText = otherLevel;
+            visual.onanimationend = () => { // an event that will never happen
+                return esc;
+            }
+            visual.onanimationstart = () => {
+                return behindVisual;
+            }
+        }
+    }
+    reloadEscapePositions() {
+        for(const child of this.element.children) {
+            if(child.classList.contains("escape")) {
+                const esc = child.onanimationend();
+                const alternate = child.onanimationstart();
+                const horizontal = esc.side == 0 || esc.side == 3;
+                const dir = horizontal ? 'x' : 'y';
+                const positive = esc.side % 2 != 0;
+                let settingValue = this[dir][positive ? 'max' : 'min'];
+                if(esc.side % 2 == 0) {
+                    settingValue -= 5;
+                }
+                if(horizontal) {
+                    this.updatePose(settingValue, esc.lowerBound, child);
+                    this.updatePose(settingValue, esc.lowerBound, alternate);
+                } else {
+                    this.updatePose(esc.lowerBound, settingValue, child);
+                    this.updatePose(esc.lowerBound, settingValue, alternate);
+                }
+            }
         }
     }
     load(game, x = 0, y = 0, firstLevel = false, boundaries = true) {

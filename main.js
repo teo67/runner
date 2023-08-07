@@ -12,7 +12,7 @@ let frameCount = 0;
 let nextSecond = Math.ceil(Date.now()/1000) * 1000;
 const main = async () => {
     let level = await importLevel(cache, startName, player);
-    level.load(game, -20, 0, true);
+    level.load(game, level.x.min, level.y.min, true);
     while(true) {
         frameCount++;
         const ntime = Date.now();

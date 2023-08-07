@@ -5,6 +5,7 @@ import glob from './src/global.js';
 import MovingBlock from './src/MovingBlock.js';
 import importLevel from './src/importLevel.js';
 const game = document.getElementById("game");
+const goto = document.getElementById("goto");
 const propertyEditor = document.getElementById("property-editor");
 const specialMarker = document.getElementById("special-marker");
 const properties = document.getElementById("properties");
@@ -14,6 +15,7 @@ const _export = document.getElementById("export");
 const propCloser = document.getElementById("close-props");
 const menu = document.getElementById("builder-menu");
 const snapOff = document.getElementById("snap-off");
+const snap5x = document.getElementById("snap-0.5x");
 const snap1x = document.getElementById("snap-1x");
 const snap2x = document.getElementById("snap-2x");
 const blockSection = document.getElementById("add-blocks");
@@ -31,6 +33,7 @@ const other = {x: 0, y: 0};
 const changing = {x: 0, y: 0};
 const mouse = {x: 0, y: 0};
 const moveTag = {x: 0, y: 0};
+const cache = {};
 const hoverRadius = 1;
 let addingNewBlock = false;
 const addableBlocks = {
@@ -111,10 +114,10 @@ const makeEscapes = () => {
     }
 }
 const updateEscapePositions = () => { // left up down right
-    level.updatePose(level.x.min - 3, level.y.min, escapes[0]);
-    level.updatePose(level.x.min, level.y.max + 1, escapes[1]);
-    level.updatePose(level.x.min, level.y.min - 3, escapes[2]);
-    level.updatePose(level.x.max + 1, level.y.min, escapes[3]);
+    level.updatePose(level.x.min - 8, level.y.min, escapes[0]);
+    level.updatePose(level.x.min, level.y.max + 6, escapes[1]);
+    level.updatePose(level.x.min, level.y.min - 8, escapes[2]);
+    level.updatePose(level.x.max + 6, level.y.min, escapes[3]);
     for(let i = 0; i < 4; i++) {
         if(i == 0 || i == 3) {
             escapes[i].style.width = `2vw`;
@@ -138,11 +141,12 @@ const setupEscape = i => {
 }
 const createLevel = () => {
     level = new Level([]);
+    cache[levelName] = level;
     level.setPlayer(player);
     level.setBoundaries(0, 10, 0, 10, false);
 }
 const loadLevel = () => {
-    level.load(game, 0, 0, true, false);
+    level.load(game, level.x.min, level.y.min, true, false);
     level.element.appendChild(preview);
 }
 const appendEscapes = () => {
@@ -167,8 +171,8 @@ const setEscapes = () => {
     const firstUpper = Math.max(cachedBounds[0], cachedBounds[1]);
     const secondLower = Math.min(other[dir], mouse[dir]);
     const secondUpper = Math.max(other[dir], mouse[dir]);
-    cachedLevel.addEscape(selectedObject, firstLower, firstUpper, levelName, secondLower/2 + secondUpper/2 - 2.5); // (side, lowerBound, upperBound, otherLevel, spawnPos, _otherSettingValue)
-    level.addEscape(3 - selectedObject, secondLower, secondUpper, cachedLevelName, firstLower/2 + firstUpper/2 - 2.5);
+    cachedLevel.addEscape(selectedObject, firstLower, firstUpper, levelName, secondLower/2 + secondUpper/2 - 2.5, true); // (side, lowerBound, upperBound, otherLevel, spawnPos, _otherSettingValue)
+    level.addEscape(3 - selectedObject, secondLower, secondUpper, cachedLevelName, firstLower/2 + firstUpper/2 - 2.5, true);
 }
 const copyLevelToClipboard = () => {
     let start = "import Level from '../src/level.js';\nimport glob from '../src/global.js';";
@@ -216,7 +220,7 @@ const copyLevelToClipboard = () => {
     middle += `\nlevel.setBoundaries(${level.x.min}, ${level.x.max}, ${level.y.min}, ${level.y.max}, !glob.building);`;
     for(let i = 0; i < 4; i++) {
         for(const escape of level.escapes[i]) {
-            middle += `\nlevel.addEscape(${i}, ${escape.lowerBound}, ${escape.upperBound}, '${escape.to}', ${escape.spawn});`;
+            middle += `\nlevel.addEscape(${i}, ${escape.lowerBound}, ${escape.upperBound}, '${escape.to}', ${escape.spawn}, glob.building);`;
         }
     }
     navigator.clipboard.writeText(start + second + middle + end);
@@ -226,11 +230,11 @@ const giveNotification = text => {
     notification.classList.remove("faded");
     setTimeout(() => {
         notification.classList.add("faded");
-    }, 1000);
+    }, 2000);
 }
 const main = async () => {
     glob.building = true;
-    level = await importLevel({}, levelName, player);
+    level = await importLevel(cache, levelName, player);
     loadLevel();
     makeEscapes();
     updateEscapePositions();
@@ -270,9 +274,48 @@ const main = async () => {
         copyLevelToClipboard();
         giveNotification("Level copied to clipboard!");
     }
+    goto.onclick = async () => {
+        if(occupied()) {
+            return;
+        }
+        editingProps = true;
+        let resp = window.prompt("Level name:","");
+        let _level = null;
+        while(true) {
+            if(resp == null) {
+                editingProps = false;
+                return;
+            }
+            try {
+                const nextLevel = await importLevel(cache, resp, player);
+                _level = nextLevel;
+                levelName = resp;
+                break;
+            } catch {
+                resp = window.prompt("That level does not exist! Try again:","");
+            }
+        }
+        copyLevelToClipboard();
+        giveNotification("Leaving level, code copied to clipboard!");
+        level.unload(game);
+        level = _level;
+        loadLevel();
+        appendEscapes();
+        updateEscapePositions();
+        editingProps = false;
+    }
     document.oncontextmenu = event => {
         event.preventDefault();
         if(occupied()) {
+            return;
+        }
+        if(event.target.classList.contains('escape')) {
+            const esc = event.target.onanimationend();
+            level.escapes[esc.side].splice(level.escapes[esc.side].indexOf(esc), 1);
+            const otherVis = event.target.onanimationstart();
+            event.target.remove();
+            otherVis.remove();
+            giveNotification("Deleted! It's recommended to delete the corresponding escape in the other level (" + esc.to + ") too.");
             return;
         }
         if(selectedObject !== null) {
@@ -313,7 +356,7 @@ const main = async () => {
                 }
             }
             if(currentSnapElement != snapOff) {
-                const snapAmount = (currentSnapElement == snap1x) ? 5 : 10;
+                const snapAmount = (currentSnapElement == snap1x) ? 5 : (currentSnapElement == snap2x ? 10 : 2.5);
                 mouse.x = snapAmount * Math.ceil(mouse.x / snapAmount);
                 if(moveMode || scale.x == -1) {
                     mouse.x -= snapAmount;
@@ -336,6 +379,18 @@ const main = async () => {
             return;
         }
         if(escapes.includes(ev.target)) {
+            return;
+        }
+        if(ev.target.classList.contains('escape')) {
+            const esc = ev.target.onanimationend();
+            copyLevelToClipboard();
+            giveNotification("Leaving level, code copied to clipboard!");
+            level.unload(game);
+            level = await importLevel(cache, esc.to, player);
+            levelName = esc.to;
+            loadLevel();
+            appendEscapes();
+            updateEscapePositions();
             return;
         }
         if(!selected && selectedObject !== null) {
@@ -379,18 +434,20 @@ const main = async () => {
                                 preview.classList.add("hidden");
                                 makingEscape = false;
                                 selectedObject = null;
+                                editingProps = false;
                                 return;
                             } else {
                                 if(resp.startsWith('/create ') && resp.length > 8) {
                                     setCaches();
-                                    createLevel();
                                     levelName = resp.substring(8);
+                                    createLevel();
+                                    
                                     player.x.position = 0;
                                     player.y.position = 0;
                                     break;
                                 } else {
                                     try {
-                                        const nextLevel = await importLevel({}, resp, player);
+                                        const nextLevel = await importLevel(cache, resp, player);
                                         setCaches();
                                         level = nextLevel;
                                         levelName = resp;
@@ -447,6 +504,7 @@ const main = async () => {
                     for(const obj of level.blocks) {
                         level.updatePose(obj.x.position, obj.y.position, obj.element);
                     }
+                    level.reloadEscapePositions();
                     updateEscapePositions(level, escapes);
                 } else {
                     selectedObject.updateScale();
@@ -468,6 +526,7 @@ const main = async () => {
     snapOff.onclick = changeSnap;
     snap1x.onclick = changeSnap;
     snap2x.onclick = changeSnap;
+    snap5x.onclick = changeSnap;
     let blockNum = 0;
     for(const key in addableBlocks) {
         const element = document.createElement("div");
@@ -585,6 +644,7 @@ const main = async () => {
                     preview.style.bottom = `${y - level.y.min}vw`;
                 }
                 if(selectedObject === level) {
+                    console.log("aaaa");
                     for(const block of level.blocks) {
                         if(block.x.position < x || block.x.position + block.x.size > x + width || block.y.position < y || block.y.position + block.y.size > y + height) {
                             valid = false;

@@ -352,7 +352,7 @@ section#property-editor button:hover {
     background-color: gray;
     color: lightgray;
 }
-button#export {
+button#export, button#goto {
     display: inline-block;
     margin-left: 1vw;
     background-color: #ffc2e2;
@@ -363,7 +363,7 @@ button#export {
     transition: all ease 0.5s;
     border: 0.5vw solid transparent;
 }
-button#export:hover {
+button#export:hover, button#goto:hover {
     border: 0.5vw solid #6e44ff;
 }
 p#notification {
@@ -389,4 +389,11 @@ div.escape-adder {
 div.escape-adder:hover {
     background-color: #ffc2e2;
     border-color: rgb(247, 105, 171);
+}
+div.build-escape {
+    transition: background-color ease 0.3s;
+    color: black;
+}
+div.build-escape:hover {
+    background-color: #ff90b3;
 }
