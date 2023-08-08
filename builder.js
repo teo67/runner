@@ -6,6 +6,7 @@ import MovingBlock from './src/MovingBlock.js';
 import importLevel from './src/importLevel.js';
 const game = document.getElementById("game");
 const goto = document.getElementById("goto");
+const test = document.getElementById("test");
 const propertyEditor = document.getElementById("property-editor");
 const specialMarker = document.getElementById("special-marker");
 const properties = document.getElementById("properties");
@@ -50,8 +51,9 @@ let currentBuildElement = null;
 let deleting = false;
 let editingProps = false;
 let makingEscape = false;
-const occupied = () => selected || deleting || editingProps;
-const altOccupied = () => makingEscape || editingProps; // less restrictive
+let testing = false;
+const occupied = () => selected || deleting || editingProps || testing;
+const altOccupied = () => makingEscape || editingProps || testing; // less restrictive
 const changeSnap = ev => {
     currentSnapElement.classList.remove("selected");
     ev.target.classList.add("selected");
@@ -252,6 +254,22 @@ const main = async () => {
             setupEscape(i);
         }
     }
+    test.onclick = () => {
+        if(testing) {
+            test.classList.remove('testing');
+            testing = false;
+            player.flies = true;
+            player.touchable = false;
+            return;
+        }
+        if(occupied()) {
+            return;
+        }
+        test.classList.add('testing');
+        testing = true;
+        player.flies = false;
+        player.touchable = true;
+    }
     propCloser.onclick = () => {
         while(properties.firstChild) {
             properties.removeChild(properties.firstChild);
@@ -372,7 +390,7 @@ const main = async () => {
         }
     }
     document.onmousedown = async ev => {
-        if(ev.button != 0 || editingProps) {
+        if(ev.button != 0 || editingProps || testing) {
             return;
         }
         if(menu.contains(ev.target)) {
@@ -589,7 +607,7 @@ const main = async () => {
         }
         
         if(!editingProps) {
-            level.update((ntime - lastTime) / 1000, true);
+            level.update((ntime - lastTime) / 1000, !testing, testing);
             if(!selected) {
                 const previousSelected = selectedObject;
                 const prevScaleX = scale.x;

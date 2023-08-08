@@ -352,7 +352,7 @@ section#property-editor button:hover {
     background-color: gray;
     color: lightgray;
 }
-button#export, button#goto {
+button#export, button#goto, button#test {
     display: inline-block;
     margin-left: 1vw;
     background-color: #ffc2e2;
@@ -363,7 +363,10 @@ button#export, button#goto {
     transition: all ease 0.5s;
     border: 0.5vw solid transparent;
 }
-button#export:hover, button#goto:hover {
+button#test.testing {
+    background-color: lightgreen;
+}
+button#export:hover, button#goto:hover, button#test:hover {
     border: 0.5vw solid #6e44ff;
 }
 p#notification {

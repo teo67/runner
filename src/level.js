@@ -65,7 +65,6 @@ class Level {
         if(side % 2 == 0) {
             settingValue -= 5;
         }
-        console.log(settingValue);
         if(horizontal) {
             this.updatePose(settingValue, lowerBound, visual);
             this.updatePose(settingValue, lowerBound, behindVisual);
@@ -177,14 +176,14 @@ class Level {
         bound.style.width = `${w}vw`;
         this.element.appendChild(bound);
     }
-    update(dt, building = false) {
+    update(dt, building = false, testing = false) {
         if(building) {
             this.ratioAndReset(this.player, dt);
             this.preliminaryCollisionAdjustment(this.player);
             this.doMinMaxAccel(this.player, dt, false);
             this.player.update(dt);
         } else {
-            this.updateCollisions(dt);
+            this.updateCollisions(dt, testing);
         }
         this.updateView(!building);
     }
@@ -622,7 +621,7 @@ class Level {
             }
         }
     }
-    updateCollisions(dt, FIRSTFRAME = false) {
+    updateCollisions(dt, testing = false) {
         for(const block of this.blocks) {
             this.ratioAndReset(block, dt);
         }
@@ -658,7 +657,7 @@ class Level {
                             cover.style.opacity = `${this.leavingTo == 1 ? diff*12 : (120 - diff*12)}%`;
                         }
                         
-                    } else if(!FIRSTFRAME) {
+                    } else {
                         this.preliminaryCollisionAdjustment(A);
                     }
                 }
@@ -666,7 +665,7 @@ class Level {
         }
         const starters = [[], [], [], []];
         for(const A of this.blocks) {
-            this.doMinMaxAccel(A, dt);
+            this.doMinMaxAccel(A, dt, !testing);
         }
         const aboveRightCheckers = [];
         const aboveLeftCheckers = [];
