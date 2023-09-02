@@ -6,7 +6,7 @@ class Wall extends Block {
     cName = "Wall";
     defaultData = _defaultData;
     constructor(x, y, w, h, data = _defaultData) {
-        super(x, y, w, h, data);
+        super(x, y, w, h, data, _defaultData);
     }
 }
 Wall.prototype.moves = false;

@@ -8,7 +8,7 @@ class MovingBlock extends Block {
     defaultData = _defaultData;
     cName = "MovingBlock";
     constructor(x, y, w, h, data = _defaultData) {
-        super(x, y, w, h, data);
+        super(x, y, w, h, data, _defaultData);
         this.x.start = x;
         this.y.start = y;
         this.m = data.m;
@@ -27,6 +27,10 @@ class MovingBlock extends Block {
         if(data.gravity) {
             this.applyConstantForce(-45 * this.m, 'y');
         }
+    }
+    permanentPositionUpdate(key, val) {
+        super.permanentPositionUpdate(key, val);
+        this[key].start = val;
     }
     reset() {
         this.x.position = this.x.start;

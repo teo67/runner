@@ -5,13 +5,14 @@ can be touched
 receives momentum
 updates
 */
+import global from './global.js';
 const _defaultData = {
     classname: "block"
 };
 class Block {
     defaultData = _defaultData;
     cName = "Block";
-    constructor(x, y, w, h, data = _defaultData) {
+    constructor(x, y, w, h, data = _defaultData, dflt = _defaultData) {
         this.x = {};
         this.y = {};
         this.x.position = x;
@@ -21,7 +22,13 @@ class Block {
         this.updates = false;
         this.element = document.createElement("div");
         this.element.classList.add(data.classname);
+        if(global.building && data != dflt) {
+            this.customData = data;
+        }
         this.updateScale();
+    }
+    permanentPositionUpdate(key, val) {
+        this[key].position = val;
     }
     reset() {}
     update() {}

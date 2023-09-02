@@ -134,6 +134,7 @@ class Level {
                 delete this.blocks[i].deleted;
             }
             const block = this.blocks[i];
+            block.reset();
             if(block !== this.player && !this.alreadyLoaded) {
                 for(const direction of ['x', 'y']) {
                     if(block[direction].position < this[direction].min) {
@@ -650,6 +651,7 @@ class Level {
                             if(this.leavingTo == 1) {
                                 this.leavingTo = null;
                                 cover.style.display = "none";
+                                A[name].position = (this.escapingSide % 2 == 0) ? (this[name].max - 5) : this[name].min;
                             } else {
                                 this.fullyLeft = true;
                             }

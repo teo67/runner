@@ -115,6 +115,18 @@ const makeEscapes = () => {
         escapes.push(esc);
     }
 }
+const canTest = () => {
+    for(const block of level.blocks) {
+        if(block === player) {
+            continue;
+        }
+        if(block.y.position < player.y.position + 5 && block.y.position + block.y.size > player.y.position && 
+           block.x.position < player.x.position + 5 && block.x.position + block.x.size > player.x.position) {
+            return false;
+        }
+    }
+    return true;
+}
 const updateEscapePositions = () => { // left up down right
     level.updatePose(level.x.min - 8, level.y.min, escapes[0]);
     level.updatePose(level.x.min, level.y.max + 6, escapes[1]);
@@ -194,9 +206,11 @@ const copyLevelToClipboard = () => {
                 let str = "{";
                 for(const item in block.customData) {
                     let adding = block.customData[item];
+                    console.log(adding == 'false');
                     if(adding != 'false' && adding != 'true' && (adding.length == 0 || !'0123456789'.includes(adding[0]))) {
                         adding = '"' + adding + '"';
                     }
+                    console.log(adding);
                     str += `${item}: ${adding}, `;
                     if(block.customData[item] != `${block.defaultData[item]}`) {
                         allSame = false;
@@ -260,9 +274,13 @@ const main = async () => {
             testing = false;
             player.flies = true;
             player.touchable = false;
+            for(const block of level.blocks) {
+                block.reset();
+                level.updatePose(block.x.position, block.y.position, block.element);
+            }
             return;
         }
-        if(occupied()) {
+        if(occupied() || !canTest()) {
             return;
         }
         test.classList.add('testing');
@@ -500,8 +518,8 @@ const main = async () => {
                 }
             } else {
                 if(moveMode) {
-                    selectedObject.x.position = mouse.x;
-                    selectedObject.y.position = mouse.y;
+                    selectedObject.permanentPositionUpdate('x', mouse.x);
+                    selectedObject.permanentPositionUpdate('y', mouse.y);
                 } else {
                     for(const dir of ['x', 'y']) {
                         const xsize = (mouse[dir] - other[dir]) * scale[dir];
@@ -511,7 +529,7 @@ const main = async () => {
                             } else {
                                 selectedObject[dir].size = xsize;
                                 if(scale[dir] == -1) {
-                                    selectedObject[dir].position = mouse[dir];
+                                    selectedObject.permanentPositionUpdate(dir, mouse[dir]);
                                 }
                             }
                         }
