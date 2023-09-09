@@ -206,13 +206,11 @@ const copyLevelToClipboard = () => {
                 let str = "{";
                 for(const item in block.customData) {
                     let adding = block.customData[item];
-                    console.log(adding == 'false');
-                    if(adding != 'false' && adding != 'true' && (adding.length == 0 || !'0123456789'.includes(adding[0]))) {
-                        adding = '"' + adding + '"';
+                    if(typeof adding == 'string') {
+                        adding = `'${adding}'`;
                     }
-                    console.log(adding);
                     str += `${item}: ${adding}, `;
-                    if(block.customData[item] != `${block.defaultData[item]}`) {
+                    if(block.customData[item] != block.defaultData[item]) {
                         allSame = false;
                     }
                 }
@@ -287,6 +285,11 @@ const main = async () => {
         testing = true;
         player.flies = false;
         player.touchable = true;
+        for(const block of level.blocks) {
+            if(block.customData !== undefined) {
+                block.updateData(block.customData);
+            }
+        }
     }
     propCloser.onclick = () => {
         while(properties.firstChild) {
@@ -302,7 +305,15 @@ const main = async () => {
         }
         for(const element of properties.children) {
             if(element.nodeName == "INPUT") {
-                selectedObject.customData[element.name] = element.value;
+                let val = element.value;
+                if(val == 'true') {
+                    val = true;
+                } else if(val == 'false') {
+                    val = false;
+                } else if(val.length > 0 && '0123456789'.includes(val[0])) {
+                    val = Number.parseFloat(val);
+                }
+                selectedObject.customData[element.name] = val;
             }
         }
     }
@@ -680,7 +691,6 @@ const main = async () => {
                     preview.style.bottom = `${y - level.y.min}vw`;
                 }
                 if(selectedObject === level) {
-                    console.log("aaaa");
                     for(const block of level.blocks) {
                         if(block.x.position < x || block.x.position + block.x.size > x + width || block.y.position < y || block.y.position + block.y.size > y + height) {
                             valid = false;

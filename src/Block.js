@@ -22,10 +22,17 @@ class Block {
         this.updates = false;
         this.element = document.createElement("div");
         this.element.classList.add(data.classname);
+        if(global.building) {
+            this.previousClass = data.classname;
+        }
         if(global.building && data != dflt) {
             this.customData = data;
         }
         this.updateScale();
+    }
+    updateData(data) {
+        this.element.classList.replace(this.previousClass, data.classname);
+        this.previousClass = data.classname;
     }
     permanentPositionUpdate(key, val) {
         this[key].position = val;

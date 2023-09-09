@@ -1,4 +1,5 @@
 import Block from './Block.js';
+import global from './global.js';
 const _defaultData = {
     m: 5,
     gravity: true,
@@ -27,6 +28,24 @@ class MovingBlock extends Block {
         if(data.gravity) {
             this.applyConstantForce(-45 * this.m, 'y');
         }
+        if(global.building) {
+            this.hadGravity = data.gravity;
+        }
+    }
+    turnOnExpansion() {
+        this.expands = true;
+        this.x.expansionSpeed = 0;
+        this.y.expansionSpeed = 0;
+    }
+    updateData(data) {
+        super.updateData(data);
+        this.m = data.m;
+        console.log('reset mass');
+        console.log(this);
+        if(this.hadGravity != data.gravity) {
+            this.applyConstantForce((data.gravity ? -45 : 45) * this.m, 'y');
+        }
+        this.hadGravity = data.gravity;
     }
     permanentPositionUpdate(key, val) {
         super.permanentPositionUpdate(key, val);
@@ -35,6 +54,14 @@ class MovingBlock extends Block {
     reset() {
         this.x.position = this.x.start;
         this.y.position = this.y.start;
+        this.x.velocity = 0;
+        this.y.velocity = 0;
+        this.touching = [[], [], [], []];
+        this.touchingStatic = [false, false, false, false];
+        if(this.expands) {
+            this.x.expansionSpeed = 0;
+            this.y.expansionSpeed = 0;
+        }
     }
     applyConstantForce(f, direction) {
         this[direction].acceleration += f/this.m;
