@@ -44,6 +44,10 @@ div.button {
     position: absolute;
     background-color: yellow;
 }
+div.enemy {
+    position: absolute;
+    background-color: red;
+}
 div.player {
     width: 5vw;
     height: 5vw;

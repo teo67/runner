@@ -4,6 +4,7 @@ import Wall from './src/Wall.js';
 import glob from './src/global.js';
 import MovingBlock from './src/MovingBlock.js';
 import importLevel from './src/importLevel.js';
+import Enemy from './src/Enemy.js';
 const game = document.getElementById("game");
 const goto = document.getElementById("goto");
 const test = document.getElementById("test");
@@ -39,7 +40,8 @@ const hoverRadius = 1;
 let addingNewBlock = false;
 const addableBlocks = {
     "block": (x, y, w, h) => new Wall(x, y, w, h),
-    "movingblock": (x, y, w, h) => new MovingBlock(x, y, w, h)
+    "movingblock": (x, y, w, h) => new MovingBlock(x, y, w, h),
+    "enemy": (x, y, w, h) => new Enemy(x, y, w, h)
 };
 let cachedLevelName = "";
 let cachedLevel = null;
@@ -117,7 +119,7 @@ const makeEscapes = () => {
 }
 const canTest = () => {
     for(const block of level.blocks) {
-        if(block === player) {
+        if(block === player || !block.touchable) {
             continue;
         }
         if(block.y.position < player.y.position + 5 && block.y.position + block.y.size > player.y.position && 
@@ -190,8 +192,8 @@ const setEscapes = () => {
 }
 const copyLevelToClipboard = () => {
     let start = "import Level from '../src/level.js';\nimport glob from '../src/global.js';";
-    let second = "\nconst level = new Level([";
-    const end = `\nexport default level;`;
+    let second = "\nconst blocks = [";
+    let end = "";
     let middle = "";
     const imports = [];
     for(const block of level.blocks) {
@@ -226,17 +228,19 @@ const copyLevelToClipboard = () => {
                 middle += `\n    ${_middle},`;
             } else {
                 second = `\nconst ${block.marker} = ${_middle};` + second;
-                middle += `\n    ${block.marker},`;
+                end += `\nblocks.push(${block.marker});`;
             }
         }
     }
-    middle += "\n]);";
-    middle += `\nlevel.setBoundaries(${level.x.min}, ${level.x.max}, ${level.y.min}, ${level.y.max}, !glob.building);`;
+    middle += "\n];";
+    end += "\nconst level = new Level(blocks);";
+    end += `\nlevel.setBoundaries(${level.x.min}, ${level.x.max}, ${level.y.min}, ${level.y.max}, !glob.building);`;
     for(let i = 0; i < 4; i++) {
         for(const escape of level.escapes[i]) {
-            middle += `\nlevel.addEscape(${i}, ${escape.lowerBound}, ${escape.upperBound}, '${escape.to}', ${escape.spawn}, glob.building);`;
+            end += `\nlevel.addEscape(${i}, ${escape.lowerBound}, ${escape.upperBound}, '${escape.to}', ${escape.spawn}, glob.building);`;
         }
     }
+    end += "\nexport default level;";
     navigator.clipboard.writeText(start + second + middle + end);
 }
 const giveNotification = text => {
@@ -285,6 +289,8 @@ const main = async () => {
         testing = true;
         player.flies = false;
         player.touchable = true;
+        level.x.start = player.x.position;
+        level.y.start = player.y.position;
         for(const block of level.blocks) {
             if(block.customData !== undefined) {
                 block.updateData(block.customData);
@@ -379,6 +385,7 @@ const main = async () => {
                 properties.appendChild(label);
                 properties.appendChild(element);
             }
+            specialMarker.value = selectedObject.marker ?? "";
             propertyEditor.classList.remove("hidden");
         }
     }

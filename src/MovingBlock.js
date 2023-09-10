@@ -17,13 +17,10 @@ class MovingBlock extends Block {
         this.y.velocity = 0;
         this.x.acceleration = 0;
         this.y.acceleration = 0;
-        this.touching = [[], [], [], []];
-        this.touchingStatic = [false, false, false, false];
         this.minVelocity = null;
         this.translation = 0;
         this.x.marked = false;
         this.y.marked = false;
-        this.bonus = 0;
         this.bonus = 0;
         if(data.gravity) {
             this.applyConstantForce(-45 * this.m, 'y');
@@ -51,9 +48,7 @@ class MovingBlock extends Block {
         super.permanentPositionUpdate(key, val);
         this[key].start = val;
     }
-    reset() {
-        this.x.position = this.x.start;
-        this.y.position = this.y.start;
+    resetMotion() {
         this.x.velocity = 0;
         this.y.velocity = 0;
         this.touching = [[], [], [], []];
@@ -62,6 +57,11 @@ class MovingBlock extends Block {
             this.x.expansionSpeed = 0;
             this.y.expansionSpeed = 0;
         }
+    }
+    reset() {
+        this.x.position = this.x.start;
+        this.y.position = this.y.start;
+        this.resetMotion();
     }
     applyConstantForce(f, direction) {
         this[direction].acceleration += f/this.m;

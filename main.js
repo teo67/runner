@@ -24,7 +24,7 @@ const main = async () => {
             const spawnIsY = level.leavingTo.side == 0 || level.leavingTo.side == 3;
             const isMax = level.leavingTo.side % 2 == 0;
             const maxMin = isMax ? 'max' : 'min';
-            const edgeAdd = isMax ? 0 : -5;
+            const edgeAdd = isMax ? 5 : -10;
             nextLevel.load(game, spawnIsY ? nextLevel.x[maxMin] + edgeAdd : level.leavingTo.spawn, spawnIsY ? level.leavingTo.spawn : nextLevel.y[maxMin] + edgeAdd);
             level = nextLevel;
         }

@@ -19,7 +19,6 @@ class Block {
         this.y.position = y;
         this.x.size = w;
         this.y.size = h;
-        this.updates = false;
         this.element = document.createElement("div");
         this.element.classList.add(data.classname);
         if(global.building) {
@@ -38,7 +37,7 @@ class Block {
         this[key].position = val;
     }
     reset() {}
-    update() {}
+    update() {return false;}
     updateScale() {
         this.element.style.width = `${this.x.size}vw`;
         this.element.style.height = `${this.y.size}vw`;
@@ -47,4 +46,5 @@ class Block {
         level.element.appendChild(this.element);
     }
 }
+Block.prototype.updates = false;
 export default Block;

@@ -115,6 +115,7 @@ class Level {
     load(game, x = 0, y = 0, firstLevel = false, boundaries = true) {
         this.fullyLeft = false;
         this.leavingTo = firstLevel ? null : 1;
+        
         this.player.initialize(this);
         if(!this.alreadyLoaded) {
             this.x.min = x;
@@ -134,7 +135,10 @@ class Level {
                 delete this.blocks[i].deleted;
             }
             const block = this.blocks[i];
-            block.reset();
+            if(block !== this.player) {
+                block.reset();
+            }
+           
             if(block !== this.player && !this.alreadyLoaded) {
                 for(const direction of ['x', 'y']) {
                     if(block[direction].position < this[direction].min) {
@@ -652,6 +656,8 @@ class Level {
                                 this.leavingTo = null;
                                 cover.style.display = "none";
                                 A[name].position = (this.escapingSide % 2 == 0) ? (this[name].max - 5) : this[name].min;
+                                this.player.x.start = A.x.position;
+                                this.player.y.start = A.y.position;
                             } else {
                                 this.fullyLeft = true;
                             }
@@ -770,9 +776,12 @@ class Level {
                 }
             }
         }
+        let breaking = false;
         for(const block of this.blocks) {
             if(block.updates && (block !== this.player || this.leavingTo === null)) {
-                block.update(dt);
+                if(block.update(dt)) {
+                    breaking = true;
+                }
             }
         }
         for(let i = 0; i < 4; i++) {
@@ -807,6 +816,12 @@ class Level {
             if(checker.y.velocity > 0 && checker.x.velocity < 0) {
                 checker.y.velocity = 0;
                 checker.x.velocity = 0;
+            }
+        }
+        if(breaking) {
+            for(const block of this.blocks) {
+                block.reset();
+                this.updatePose(block.x.position, block.y.position, block.element);
             }
         }
     }

@@ -25,7 +25,7 @@ class Player extends MovingBlock {
         if(this.flies && glob.keysDown["q"]) {
             this.x.velocity = 0;
             this.y.velocity = 0;
-            return;
+            return false;
         }
         let fx = 0;
         let fy = 0;
@@ -65,6 +65,7 @@ class Player extends MovingBlock {
         }
         this.applyConstantForce(forceDueToKeyX * fx, 'x');
         this.applyConstantForce(forceDueToKeyY * fy, 'y');
+        return false;
     }
 }
 export default Player;
