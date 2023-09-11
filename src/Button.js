@@ -1,4 +1,4 @@
-import MovingBlock from "./MovingBlock";
+import MovingBlock from "./MovingBlock.js";
 const _defaultData = {
     m: 5,
     gravity: false,
@@ -9,23 +9,36 @@ const _defaultData = {
     minSize: 1,
     negative: false
 };
+const copyData = (self, data) => {
+    self.direction = data.direction;
+    self.pressSpeed = data.pressSpeed;
+    self.releaseSpeed = data.releaseSpeed;
+    self.minSize = data.minSize;
+    self.negative = data.negative;
+    self.maxSize = (self.direction == 'x') ? self.x.size : self.y.size;
+}
 class Button extends MovingBlock {
-    constructor(x, y, w, h, onpress = null, onrelease = null, data = _defaultData) {
+    cName = "Button";
+    constructor(x, y, w, h, data = _defaultData) {
         super(x, y, w, h, data);
-        this.onpress = onpress;
-        this.onrelease = onrelease;
-        this.x.expansionSpeed = 0;
-        this[this.direction].expansionSpeed = 0;
+        this.onpress = null;
+        this.onrelease = null;
         this.pressed = false;
-        this.direction = data.direction;
-        this.pressSpeed = data.pressSpeed;
-        this.releaseSpeed = data.releaseSpeed;
-        this.minSize = data.minSize;
-        this.maxSize = (this.direction == 'x') ? w : h;
-        this.negative = data.negative;
+        copyData(this, data);
+    }
+    
+    reset(level, data = null) {
+        super.reset(level, data);
+        if(data != null) {
+            copyData(this, data);
+        }
     }
     update() {
-        if(this.touching[1].length > 0) {
+        let touchIndex = (this.direction == 'y' ? 1 : 3);
+        if(this.negative) {
+            touchIndex = 3 - touchIndex;
+        }
+        if(this.touching[touchIndex].length > 0) {
             if(this[this.direction].size > this.minSize) {
                 this[this.direction].expansionSpeed = this.pressSpeed;
                 if(this.negative) {
@@ -56,6 +69,7 @@ class Button extends MovingBlock {
             } else {
                 this[this.direction].expansionSpeed = 0;
                 this[this.direction].velocity = 0;
+                this[this.direction].size = this.maxSize;
             }
         }
     }
@@ -64,4 +78,5 @@ Button.prototype.expands = true;
 Button.prototype.xreceivesMomentum = false;
 Button.prototype.yreceivesMomentum = false;
 Button.prototype.updates = true;
+Button.prototype.defaultData = _defaultData;
 export default Button;

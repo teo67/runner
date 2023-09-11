@@ -5,9 +5,8 @@ const _defaultData = {
 };
 class Enemy extends Wall {
     cName = "Enemy";
-    defaultData = _defaultData;
     constructor(x, y, w, h, data = _defaultData) {
-        super(x, y, w, h, data, _defaultData);
+        super(x, y, w, h, data);
     }
     update() {
         for(const li of this.touching) {
@@ -22,4 +21,5 @@ class Enemy extends Wall {
 }
 Enemy.prototype.updates = true;
 Enemy.prototype.touchesOthers = true;
+Enemy.prototype.defaultData = _defaultData;
 export default Enemy;

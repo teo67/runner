@@ -10,9 +10,8 @@ const _defaultData = {
     classname: "block"
 };
 class Block {
-    defaultData = _defaultData;
     cName = "Block";
-    constructor(x, y, w, h, data = _defaultData, dflt = _defaultData) {
+    constructor(x, y, w, h, data = _defaultData) {
         this.x = {};
         this.y = {};
         this.x.position = x;
@@ -21,20 +20,17 @@ class Block {
         this.y.size = h;
         this.element = document.createElement("div");
         this.element.classList.add(data.classname);
-        if(global.building) {
-            this.previousClass = data.classname;
-        }
-        if(global.building && data != dflt) {
+        if(global.building && data != this.defaultData) {
+            console.log(data);
             this.customData = data;
         }
         this.updateScale();
     }
-    updateData(data) {
-        this.element.classList.replace(this.previousClass, data.classname);
-        this.previousClass = data.classname;
-    }
     permanentPositionUpdate(key, val) {
         this[key].position = val;
+    }
+    permanentSizeUpdate(key, val) {
+        this[key].size = val;
     }
     reset() {}
     update() {return false;}
@@ -47,4 +43,5 @@ class Block {
     }
 }
 Block.prototype.updates = false;
+Block.prototype.defaultData = _defaultData;
 export default Block;

@@ -136,7 +136,7 @@ class Level {
             }
             const block = this.blocks[i];
             if(block !== this.player) {
-                block.reset();
+                block.reset(this);
             }
            
             if(block !== this.player && !this.alreadyLoaded) {
@@ -452,6 +452,8 @@ class Level {
                 if(starter.expands && i % 2 == 1) {
                     firstV += starter[dir].expansionSpeed;
                 }
+                // console.log  ('basic collision');
+                // console.log  (momentumInfo);
                 if(momentumInfo.connected.length > 1 && firstV >= 0) {
                     const settingVelocity = momentumInfo.momentum/momentumInfo.mass * multiplier;
                     for(const connected of momentumInfo.connected) {
@@ -506,6 +508,8 @@ class Level {
         momentumInfo.momentum += adding;
         if(totalMass == 0) { // if this was the starter
             momentumInfo.momentum += momentumInfo.bonusMomentum;
+            // console.log  ('nonbasic collision');
+            // console.log  (momentumInfo);
             let settingVelocity = starter.minVelocity;
             if(settingVelocity === null) {
                 settingVelocity = momentumInfo.momentum/momentumInfo.mass;
@@ -627,6 +631,7 @@ class Level {
         }
     }
     updateCollisions(dt, testing = false) {
+        console.log(this.player)
         for(const block of this.blocks) {
             this.ratioAndReset(block, dt);
         }
@@ -820,8 +825,7 @@ class Level {
         }
         if(breaking) {
             for(const block of this.blocks) {
-                block.reset();
-                this.updatePose(block.x.position, block.y.position, block.element);
+                block.reset(this);
             }
         }
     }

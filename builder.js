@@ -5,6 +5,7 @@ import glob from './src/global.js';
 import MovingBlock from './src/MovingBlock.js';
 import importLevel from './src/importLevel.js';
 import Enemy from './src/Enemy.js';
+import Button from './src/Button.js';
 const game = document.getElementById("game");
 const goto = document.getElementById("goto");
 const test = document.getElementById("test");
@@ -36,12 +37,13 @@ const changing = {x: 0, y: 0};
 const mouse = {x: 0, y: 0};
 const moveTag = {x: 0, y: 0};
 const cache = {};
-const hoverRadius = 1;
+const hoverRadius = 0.3;
 let addingNewBlock = false;
 const addableBlocks = {
     "block": (x, y, w, h) => new Wall(x, y, w, h),
     "movingblock": (x, y, w, h) => new MovingBlock(x, y, w, h),
-    "enemy": (x, y, w, h) => new Enemy(x, y, w, h)
+    "enemy": (x, y, w, h) => new Enemy(x, y, w, h),
+    "button": (x, y, w, h) => new Button(x, y, w, h)
 };
 let cachedLevelName = "";
 let cachedLevel = null;
@@ -75,11 +77,11 @@ const testObject = (obj, isLevel) => {
         moveMode = false;
         const edited = {x: true, y: true};
         for(const dir of ['x', 'y']) {
-            if(Math.abs(mouse[dir] - max[dir]) < hoverRadius) {
+            if(Math.abs(mouse[dir] - max[dir] + hoverRadius) < hoverRadius) {
                 scale[dir] = 1;
                 other[dir] = min[dir];
                 changing[dir] = max[dir];
-            } else if(Math.abs(mouse[dir] - min[dir]) < hoverRadius) {
+            } else if(Math.abs(mouse[dir] - min[dir] - hoverRadius) < hoverRadius) {
                 scale[dir] = -1;
                 other[dir] = max[dir];
                 changing[dir] = min[dir];
@@ -192,8 +194,8 @@ const setEscapes = () => {
 }
 const copyLevelToClipboard = () => {
     let start = "import Level from '../src/level.js';\nimport glob from '../src/global.js';";
-    let second = "\nconst blocks = [";
-    let end = "";
+    let second = "\nconst level = new Level([";
+    const end = `\nexport default level;`;
     let middle = "";
     const imports = [];
     for(const block of level.blocks) {
@@ -206,17 +208,18 @@ const copyLevelToClipboard = () => {
             if(block.customData !== undefined) {
                 let allSame = true;
                 let str = "{";
+                console.log(block.defaultData);
                 for(const item in block.customData) {
-                    let adding = block.customData[item];
-                    if(typeof adding == 'string') {
-                        adding = `'${adding}'`;
-                    }
-                    str += `${item}: ${adding}, `;
                     if(block.customData[item] != block.defaultData[item]) {
                         allSame = false;
+                        let adding = block.customData[item];
+                        if(typeof adding == 'string') {
+                            adding = `'${adding}'`;
+                        }
+                        str += `${item}: ${adding}, `;
                     }
                 }
-                str += "}";
+                str += `__proto__: ${block.cName}.prototype.defaultData}`;
                 if(!allSame) {
                     _middle += `, ${str}`;
                 } else {
@@ -227,20 +230,18 @@ const copyLevelToClipboard = () => {
             if(block.marker === undefined || block.marker.length == 0) {
                 middle += `\n    ${_middle},`;
             } else {
-                second = `\nconst ${block.marker} = ${_middle};` + second;
-                end += `\nblocks.push(${block.marker});`;
+                second = `\nconst ${block.marker} = ${_middle};\nif(glob.building) {${block.marker}.marker = '${block.marker}';}` + second;
+                middle += `\n    ${block.marker},`;
             }
         }
     }
-    middle += "\n];";
-    end += "\nconst level = new Level(blocks);";
-    end += `\nlevel.setBoundaries(${level.x.min}, ${level.x.max}, ${level.y.min}, ${level.y.max}, !glob.building);`;
+    middle += "\n]);";
+    middle += `\nlevel.setBoundaries(${level.x.min}, ${level.x.max}, ${level.y.min}, ${level.y.max}, !glob.building);`;
     for(let i = 0; i < 4; i++) {
         for(const escape of level.escapes[i]) {
-            end += `\nlevel.addEscape(${i}, ${escape.lowerBound}, ${escape.upperBound}, '${escape.to}', ${escape.spawn}, glob.building);`;
+            middle += `\nlevel.addEscape(${i}, ${escape.lowerBound}, ${escape.upperBound}, '${escape.to}', ${escape.spawn}, glob.building);`;
         }
     }
-    end += "\nexport default level;";
     navigator.clipboard.writeText(start + second + middle + end);
 }
 const giveNotification = text => {
@@ -272,12 +273,12 @@ const main = async () => {
     }
     test.onclick = () => {
         if(testing) {
-            test.classList.remove('testing');
+            menu.classList.remove('testing');
             testing = false;
             player.flies = true;
             player.touchable = false;
             for(const block of level.blocks) {
-                block.reset();
+                block.reset(level);
                 level.updatePose(block.x.position, block.y.position, block.element);
             }
             return;
@@ -285,16 +286,14 @@ const main = async () => {
         if(occupied() || !canTest()) {
             return;
         }
-        test.classList.add('testing');
+        menu.classList.add('testing');
         testing = true;
         player.flies = false;
         player.touchable = true;
-        level.x.start = player.x.position;
-        level.y.start = player.y.position;
+        player.x.start = player.x.position;
+        player.y.start = player.y.position;
         for(const block of level.blocks) {
-            if(block.customData !== undefined) {
-                block.updateData(block.customData);
-            }
+            block.reset(level, block.customData ?? null);
         }
     }
     propCloser.onclick = () => {
@@ -316,7 +315,7 @@ const main = async () => {
                     val = true;
                 } else if(val == 'false') {
                     val = false;
-                } else if(val.length > 0 && '0123456789'.includes(val[0])) {
+                } else if(val.length > 0 && '-0123456789'.includes(val[0])) {
                     val = Number.parseFloat(val);
                 }
                 selectedObject.customData[element.name] = val;
@@ -545,10 +544,12 @@ const main = async () => {
                             if(selectedObject === level) {
                                 selectedObject[dir][scale[dir] == 1 ? "max" : "min"] = mouse[dir];
                             } else {
-                                selectedObject[dir].size = xsize;
+                                // selectedObject[dir].size = xsize;
+                                selectedObject.permanentSizeUpdate(dir, xsize);
                                 if(scale[dir] == -1) {
                                     selectedObject.permanentPositionUpdate(dir, mouse[dir]);
                                 }
+                                
                             }
                         }
                     }

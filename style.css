@@ -261,6 +261,10 @@ nav#builder-menu {
     background-color: #ff90b3;
     padding: 1vw;
     border-radius: 1vw;
+    transition: all ease 0.5s;
+}
+nav#builder-menu.testing {
+    opacity: 0.2;
 }
 nav#builder-menu section#snap {
     background-color: #ffc2e2;
@@ -367,7 +371,7 @@ button#export, button#goto, button#test {
     transition: all ease 0.5s;
     border: 0.5vw solid transparent;
 }
-button#test.testing {
+nav#builder-menu.testing button#test {
     background-color: lightgreen;
 }
 button#export:hover, button#goto:hover, button#test:hover {

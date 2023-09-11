@@ -1,56 +1,54 @@
 import Block from './Block.js';
-import global from './global.js';
 const _defaultData = {
     m: 5,
     gravity: true,
     classname: 'movingblock'
 };
+const copyData = (self, data) => {
+    self.m = data.m;
+    self.x.acceleration = 0;
+    self.y.acceleration = 0;
+    if(data.gravity) {
+        self.applyConstantForce(-45 * self.m, 'y');
+    }
+}
 class MovingBlock extends Block {
-    defaultData = _defaultData;
     cName = "MovingBlock";
     constructor(x, y, w, h, data = _defaultData) {
-        super(x, y, w, h, data, _defaultData);
+        super(x, y, w, h, data);
         this.x.start = x;
         this.y.start = y;
-        this.m = data.m;
-        this.x.velocity = 0;
-        this.y.velocity = 0;
-        this.x.acceleration = 0;
-        this.y.acceleration = 0;
-        this.minVelocity = null;
-        this.translation = 0;
-        this.x.marked = false;
-        this.y.marked = false;
-        this.bonus = 0;
-        if(data.gravity) {
-            this.applyConstantForce(-45 * this.m, 'y');
+        if(this.expands) {
+            this.x.startsize = w;
+            this.y.startsize = h;
         }
-        if(global.building) {
-            this.hadGravity = data.gravity;
-        }
+        
+        this.resetMotion();
+        copyData(this, data);
     }
     turnOnExpansion() {
         this.expands = true;
         this.x.expansionSpeed = 0;
         this.y.expansionSpeed = 0;
     }
-    updateData(data) {
-        super.updateData(data);
-        this.m = data.m;
-        console.log('reset mass');
-        console.log(this);
-        if(this.hadGravity != data.gravity) {
-            this.applyConstantForce((data.gravity ? -45 : 45) * this.m, 'y');
-        }
-        this.hadGravity = data.gravity;
-    }
     permanentPositionUpdate(key, val) {
         super.permanentPositionUpdate(key, val);
         this[key].start = val;
     }
+    permanentSizeUpdate(key, val) {
+        super.permanentSizeUpdate(key, val);
+        if(this.expands) {
+            this[key].startsize = val;
+        }
+    }
     resetMotion() {
         this.x.velocity = 0;
         this.y.velocity = 0;
+        this.minVelocity = null;
+        this.translation = 0;
+        this.x.marked = false;
+        this.y.marked = false;
+        this.bonus = 0;
         this.touching = [[], [], [], []];
         this.touchingStatic = [false, false, false, false];
         if(this.expands) {
@@ -58,10 +56,21 @@ class MovingBlock extends Block {
             this.y.expansionSpeed = 0;
         }
     }
-    reset() {
+    reset(level, data = null) {
         this.x.position = this.x.start;
         this.y.position = this.y.start;
+        if(this.expands) {
+            this.x.size = this.x.startsize;
+            this.y.size = this.y.startsize;
+        }
         this.resetMotion();
+        if(data != null) {
+            copyData(this, data);
+        };
+        level.updatePose(this.x.position, this.y.position, this.element);
+        if(this.expands) {
+            this.updateScale();
+        }
     }
     applyConstantForce(f, direction) {
         this[direction].acceleration += f/this.m;
@@ -80,4 +89,5 @@ MovingBlock.prototype.touchesOthers = true;
 MovingBlock.prototype.touchable = true;
 MovingBlock.prototype.updates = false;
 MovingBlock.prototype.expands = false;
+MovingBlock.prototype.defaultData = _defaultData;
 export default MovingBlock;
