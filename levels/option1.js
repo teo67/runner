@@ -21,6 +21,7 @@ const level = new Level([
 ]);
 level.setBoundaries(0, 150, -17.5, 10, !glob.building);
 level.addEscape(1, 0, 10, 'right1', 131.25, glob.building);
+level.addEscape(1, 132.5, 150, 'meetup1', 81.25, glob.building);
 
 slider1.updates = true;
 slider1.xreceivesMomentum = false;

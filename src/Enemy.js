@@ -14,6 +14,9 @@ class Enemy extends Wall {
                 if(el instanceof Player) {
                     return true;
                 }
+                if(el.dies) {
+                    el.die();
+                }
             }
         }
         return false;

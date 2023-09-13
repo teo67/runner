@@ -208,7 +208,6 @@ const copyLevelToClipboard = () => {
             if(block.customData !== undefined) {
                 let allSame = true;
                 let str = "{";
-                console.log(block.defaultData);
                 for(const item in block.customData) {
                     if(block.customData[item] != block.defaultData[item]) {
                         allSame = false;
@@ -749,6 +748,7 @@ const main = async () => {
                     makingEscape = false;
                     selectedObject = null;
                     if(cachedLevel != null) {
+                        level.unload(game);
                         level = cachedLevel;
                         levelName = cachedLevelName;
                         clearCaches();

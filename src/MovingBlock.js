@@ -30,6 +30,8 @@ class MovingBlock extends Block {
         this.expands = true;
         this.x.expansionSpeed = 0;
         this.y.expansionSpeed = 0;
+        this.x.startsize = this.x.size;
+        this.y.startsize = this.y.size;
     }
     permanentPositionUpdate(key, val) {
         super.permanentPositionUpdate(key, val);

@@ -21,7 +21,6 @@ class Block {
         this.element = document.createElement("div");
         this.element.classList.add(data.classname);
         if(global.building && data != this.defaultData) {
-            console.log(data);
             this.customData = data;
         }
         this.updateScale();

@@ -631,7 +631,6 @@ class Level {
         }
     }
     updateCollisions(dt, testing = false) {
-        console.log(this.player)
         for(const block of this.blocks) {
             this.ratioAndReset(block, dt);
         }
@@ -656,7 +655,7 @@ class Level {
                                 diff = this[name].max + 5 - A[name].position;
                             }
                         }
-                        if(diff <= 0) {
+                        if(diff < 0 || epsilonEquals(diff, 0)) {
                             if(this.leavingTo == 1) {
                                 this.leavingTo = null;
                                 cover.style.display = "none";
