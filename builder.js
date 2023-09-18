@@ -6,6 +6,10 @@ import MovingBlock from './src/MovingBlock.js';
 import importLevel from './src/importLevel.js';
 import Enemy from './src/Enemy.js';
 import Button from './src/Button.js';
+import Checkpoint from './src/Checkpoint.js';
+import BackgroundImage from './src/BackgroundImage.js';
+import SpawningBlock from './src/SpawningBlock.js';
+import blockInside from './src/blockInside.js';
 const game = document.getElementById("game");
 const goto = document.getElementById("goto");
 const test = document.getElementById("test");
@@ -43,7 +47,10 @@ const addableBlocks = {
     "block": (x, y, w, h) => new Wall(x, y, w, h),
     "movingblock": (x, y, w, h) => new MovingBlock(x, y, w, h),
     "enemy": (x, y, w, h) => new Enemy(x, y, w, h),
-    "button": (x, y, w, h) => new Button(x, y, w, h)
+    "button": (x, y, w, h) => new Button(x, y, w, h),
+    "back_image": (x, y, w, h) => new BackgroundImage(x, y, w, h),
+    "spawningblock": (x, y, w, h) => new SpawningBlock(x, y, w, h),
+    "checkpoint": (x, y, w, h) => new Checkpoint(x, y, w, h)
 };
 let cachedLevelName = "";
 let cachedLevel = null;
@@ -120,12 +127,12 @@ const makeEscapes = () => {
     }
 }
 const canTest = () => {
+    console.log(player)
     for(const block of level.blocks) {
         if(block === player || !block.touchable) {
             continue;
         }
-        if(block.y.position < player.y.position + 5 && block.y.position + block.y.size > player.y.position && 
-           block.x.position < player.x.position + 5 && block.x.position + block.x.size > player.x.position) {
+        if(blockInside(player.x.position, player.y.position, 5, 5, block)) {
             return false;
         }
     }
@@ -698,11 +705,9 @@ const main = async () => {
                     preview.style.bottom = `${y - level.y.min}vw`;
                 }
                 if(selectedObject === level) {
-                    for(const block of level.blocks) {
-                        if(block.x.position < x || block.x.position + block.x.size > x + width || block.y.position < y || block.y.position + block.y.size > y + height) {
-                            valid = false;
-                            break;
-                        }
+                    if(!blockInside(x, y, width, height, block)) {
+                        valid = false;
+                        break;
                     }
                 } else if (makingEscape) {
                     if(selectedObject == 0 || selectedObject == 3) {
@@ -718,7 +723,7 @@ const main = async () => {
                     } else if(selectedObject.touchable) {
                         for(const block of level.blocks) {
                             if(block !== selectedObject && block.touchable) {
-                                if(block.x.position + block.x.size > x && block.x.position < x + width && block.y.position + block.y.size > y && block.y.position < y + height) {
+                                if(blockInside(x, y, width, height, block)) {
                                     valid = false;
                                     break;
                                 }

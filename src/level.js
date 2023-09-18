@@ -349,7 +349,7 @@ class Level {
             } else {
                 B.touchingStatic[i] = true;
                 if(bool && B.moves) {
-                    if(B.expands && side % 2 == 1 && B[dir].expansionSpeed < 0) {
+                    if(B.expands && i % 2 == 1 && B[dir].expansionSpeed < 0) {
                         B[dir].velocity = -B[dir].expansionSpeed;
                     } else {
                         B[dir].velocity = 0;

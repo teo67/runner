@@ -5,14 +5,14 @@ import importLevel from './src/importLevel.js';
 const game = document.getElementById("game");
 const fpsCounter = document.getElementById("FPS");
 const cache = {};
-const startName = 'start';
+const startName = 'right2';
 const player = new Player();
 let lastTime = Date.now();
 let frameCount = 0;
 let nextSecond = Math.ceil(Date.now()/1000) * 1000;
 const main = async () => {
     let level = await importLevel(cache, startName, player);
-    level.load(game, level.x.min, level.y.min, true);
+    level.load(game, level.x.min, level.y.min+30, true);
     while(true) {
         frameCount++;
         const ntime = Date.now();

@@ -40,6 +40,11 @@ div.movingblock {
     background-color: #b892ff;
     border: 0.5vw solid #6e44ff;
 }
+div.spawningblock {
+    position: absolute;
+    background-color: #b892ff;
+    border: 0.5vw dashed #6e44ff;
+}
 div.button {
     position: absolute;
     background-color: yellow;
@@ -47,6 +52,20 @@ div.button {
 div.enemy {
     position: absolute;
     background-color: red;
+}
+div.checkpoint {
+    position: absolute;
+    background-color: green;
+    opacity: 0.3;
+}
+div.checkpoint.active {
+    opacity: 0.6;
+}
+div.back_image {
+    position: absolute;
+    background-color: transparent;
+    background-image: url("./images/default.jpg");
+    background-size: 100% 100%;
 }
 div.player {
     width: 5vw;
@@ -254,6 +273,7 @@ section#game div.selected::before {
 }
 nav#builder-menu {
     position: absolute;
+    display: block;
     z-index: 100;
     bottom: 2.5vw;
     width: 95vw;
@@ -262,6 +282,7 @@ nav#builder-menu {
     padding: 1vw;
     border-radius: 1vw;
     transition: all ease 0.5s;
+    height: 10vw;
 }
 nav#builder-menu.testing {
     opacity: 0.2;
@@ -296,8 +317,9 @@ nav#builder-menu p#instructions {
     border-radius: 0.5vw;
 }
 section#add-blocks {
-    display: inline-block;
+    display: block;
     position: absolute;
+    margin-top: 0.5vw;
 }
 div.builder-adder {
     position: relative;
